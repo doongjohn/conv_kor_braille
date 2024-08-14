@@ -95,7 +95,7 @@ pub const KorCharBraille = struct {
     }
 };
 
-pub fn splitKorChar(code_point: u21) ?KorCharIndex {
+pub fn korCharToIndex(code_point: u21) ?KorCharIndex {
     const is_single = code_point >= 0x3131 and code_point <= 0x3163;
     const is_composite = code_point >= 0xAC00 and code_point <= 0xD79D;
     if (is_single) {
@@ -108,7 +108,6 @@ pub fn splitKorChar(code_point: u21) ?KorCharIndex {
         if (std.mem.indexOf(u21, &jongsungs, &.{code_point})) |i| {
             return .{ .jongsung = .{ .i = @intCast(i) } };
         }
-        return null;
     } else if (is_composite) {
         const base = code_point - 0xAC00;
         const cho: u8 = @intCast(base / 28 / 21);
@@ -119,9 +118,8 @@ pub fn splitKorChar(code_point: u21) ?KorCharIndex {
             .jungsung_i = jung,
             .jongsung_i = jong,
         } };
-    } else {
-        return null;
     }
+    return null;
 }
 
 pub fn chosungToBraille(index: u8) []const u21 {
@@ -149,7 +147,7 @@ pub fn jongsungToBraille(index: u8) []const u21 {
 }
 
 pub fn korCharToBraille(code_point: u21) ?KorCharBraille {
-    if (splitKorChar(code_point)) |char_comp| {
+    if (korCharToIndex(code_point)) |char_comp| {
         var braille: KorCharBraille = undefined;
         switch (char_comp) {
             .chosung => |chosung| {
