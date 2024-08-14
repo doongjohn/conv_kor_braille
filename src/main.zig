@@ -11,9 +11,10 @@ pub fn main() !void {
     var iter_utf8 = (try unicode.Utf8View.init(input)).iterator();
     while (iter_utf8.nextCodepoint()) |code_point| {
         if (braille_conv.korCharToBraille(code_point)) |braille| {
-            std.debug.print("{s}\n", .{braille});
+            std.debug.print("{s}", .{braille});
         } else {
-            std.debug.print("failed to convert to braille\n", .{});
+            std.debug.print("{u}", .{code_point});
         }
     }
+    std.debug.print("\n", .{});
 }

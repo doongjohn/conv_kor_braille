@@ -103,8 +103,8 @@ pub fn chosungToBraille(index: u8) []const u21 {
 }
 
 pub fn jungsungToBraille(index: u8) []const u21 {
-    if (brailles_cho[index] <= 3) {
-        return &brailles_jung2[brailles_cho[index]];
+    if (brailles_jung[index] <= 3) {
+        return &brailles_jung2[brailles_jung[index]];
     } else {
         return brailles_jung[index .. index + 1];
     }
