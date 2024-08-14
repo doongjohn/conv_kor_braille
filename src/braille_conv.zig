@@ -131,9 +131,9 @@ pub fn jongsungToBraille(index: u8) []const u21 {
 }
 
 pub fn korCharToBraille(code_point: u21) ?KorCharBraille {
-    if (korCharToIndex(code_point)) |char_comp| {
+    if (korCharToIndex(code_point)) |char_index| {
         var braille: KorCharBraille = undefined;
-        switch (char_comp) {
+        switch (char_index) {
             .chosung => |chosung| {
                 braille = .{
                     .is_single = true,
