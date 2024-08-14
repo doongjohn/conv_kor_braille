@@ -54,9 +54,9 @@ pub const KorCharIndex = union(enum) {
 
 pub const KorCharBraille = struct {
     is_single: bool = false,
-    chosung: ?[]const u21,
+    chosung: []const u21,
     jungsung: []const u21,
-    jongsung: ?[]const u21,
+    jongsung: []const u21,
 
     pub fn format(self: @This(), comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
         _ = fmt;
@@ -64,33 +64,15 @@ pub const KorCharBraille = struct {
 
         if (self.is_single) {
             try writer.print("⠿", .{});
-            if (self.chosung == null and self.jongsung == null) {
-                for (self.jungsung) |code_point| {
-                    try writer.print("{u}", .{code_point});
-                }
-            } else if (self.chosung) |chosung| {
-                for (chosung) |code_point| {
-                    try writer.print("{u}", .{code_point});
-                }
-            } else if (self.jongsung) |jongsung| {
-                for (jongsung) |code_point| {
-                    try writer.print("{u}", .{code_point});
-                }
-            }
-        } else {
-            if (self.chosung) |chosung| {
-                for (chosung) |code_point| {
-                    try writer.print("{u}", .{code_point});
-                }
-            }
-            for (self.jungsung) |code_point| {
-                try writer.print("{u}", .{code_point});
-            }
-            if (self.jongsung) |jongsung| {
-                for (jongsung) |code_point| {
-                    try writer.print("{u}", .{code_point});
-                }
-            }
+        }
+        for (self.chosung) |code_point| {
+            try writer.print("{u}", .{code_point});
+        }
+        for (self.jungsung) |code_point| {
+            try writer.print("{u}", .{code_point});
+        }
+        for (self.jongsung) |code_point| {
+            try writer.print("{u}", .{code_point});
         }
     }
 };
@@ -139,7 +121,9 @@ pub fn jungsungToBraille(index: u8) []const u21 {
 }
 
 pub fn jongsungToBraille(index: u8) []const u21 {
-    if (brailles_jong[index] <= 11) {
+    if (index == 0) {
+        return &.{};
+    } else if (brailles_jong[index] <= 11) {
         return &brailles_jong2[brailles_jong[index]];
     } else {
         return brailles_jong[index .. index + 1];
@@ -155,21 +139,21 @@ pub fn korCharToBraille(code_point: u21) ?KorCharBraille {
                     .is_single = true,
                     .chosung = chosungToBraille(chosung.i),
                     .jungsung = &.{},
-                    .jongsung = null,
+                    .jongsung = &.{},
                 };
             },
             .jungsung => |jungsung| {
                 braille = .{
                     .is_single = true,
-                    .chosung = null,
+                    .chosung = &.{},
                     .jungsung = jungsungToBraille(jungsung.i),
-                    .jongsung = null,
+                    .jongsung = &.{},
                 };
             },
             .jongsung => |jongsung| {
                 braille = .{
                     .is_single = true,
-                    .chosung = null,
+                    .chosung = &.{},
                     .jungsung = &.{},
                     .jongsung = jongsungToBraille(jongsung.i),
                 };
@@ -178,19 +162,13 @@ pub fn korCharToBraille(code_point: u21) ?KorCharBraille {
                 braille = .{
                     .chosung = blk: {
                         if (composite.chosung_i == 11) {
-                            break :blk null;
+                            break :blk &.{};
                         } else {
                             break :blk chosungToBraille(composite.chosung_i);
                         }
                     },
                     .jungsung = jungsungToBraille(composite.jungsung_i),
-                    .jongsung = blk: {
-                        if (composite.jongsung_i == 0) {
-                            break :blk null;
-                        } else {
-                            break :blk jongsungToBraille(composite.jongsung_i);
-                        }
-                    },
+                    .jongsung = jongsungToBraille(composite.jongsung_i),
                 };
             },
         }
