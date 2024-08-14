@@ -35,13 +35,10 @@ const brailles_jong2 = [_][2]u21{
     .{ '⠃', '⠄' }, // ㅄ
 };
 
-pub const KorCharComponents = struct {
+pub const KorCharIndex = struct {
     chosung_i: u8,
     jungsung_i: u8,
     jongsung_i: u8,
-    chosung: ?u21,
-    jungsung: u21,
-    jongsung: ?u21,
 };
 
 pub const KorCharBraille = struct {
@@ -68,7 +65,7 @@ pub const KorCharBraille = struct {
     }
 };
 
-pub fn splitKorChar(code_point: u21) ?KorCharComponents {
+pub fn splitKorChar(code_point: u21) ?KorCharIndex {
     const is_kor_char = code_point >= 0xAC00 and code_point <= 0xD79D;
     if (is_kor_char) {
         const base = code_point - 0xAC00;
@@ -79,15 +76,6 @@ pub fn splitKorChar(code_point: u21) ?KorCharComponents {
             .chosung_i = cho,
             .jungsung_i = jung,
             .jongsung_i = jong,
-            .chosung = chosungs[cho],
-            .jungsung = jungsungs[jung],
-            .jongsung = blk: {
-                if (jong == 0) {
-                    break :blk null;
-                } else {
-                    break :blk jongsungs[jong];
-                }
-            },
         };
     } else {
         return null;
