@@ -2,7 +2,7 @@ const std = @import("std");
 
 pub const KorBrailleCluster = union(enum) {
     single: struct {
-        arr: [3]u21,
+        buf: [3]u21,
         len: u8,
     },
     composite: struct {
@@ -11,7 +11,7 @@ pub const KorBrailleCluster = union(enum) {
         jongsung: []const u21,
     },
     abbrev: struct {
-        arr: [2]u21,
+        buf: [2]u21,
         len: u8,
     },
 
@@ -22,7 +22,7 @@ pub const KorBrailleCluster = union(enum) {
         switch (self) {
             .single => |single| {
                 for (0..single.len) |i| {
-                    try writer.print("{u}", .{single.arr[i]});
+                    try writer.print("{u}", .{single.buf[i]});
                 }
             },
             .composite => |composite| {
@@ -38,7 +38,7 @@ pub const KorBrailleCluster = union(enum) {
             },
             .abbrev => |abbrev| {
                 for (0..abbrev.len) |i| {
-                    try writer.print("{u}", .{abbrev.arr[i]});
+                    try writer.print("{u}", .{abbrev.buf[i]});
                 }
             },
         }
@@ -75,7 +75,7 @@ pub fn korWordToBraille(slice: []const u8, word_len: *usize) ?KorBrailleCluster 
             if (std.mem.startsWith(u8, slice[3..], words.kor[i])) {
                 word_len.* = words.kor[i].len + 3;
                 break KorBrailleCluster{ .abbrev = .{
-                    .arr = .{ '⠁', words.braille[i] },
+                    .buf = .{ '⠁', words.braille[i] },
                     .len = 2,
                 } };
             }
@@ -206,26 +206,26 @@ pub fn korCharToBraille(code_point: u21) ?KorBrailleCluster {
             .chosung => |chosung| {
                 const slice = chosungToBraille(chosung.i);
                 braille = .{ .single = .{
-                    .arr = .{ '⠿', 0, 0 },
+                    .buf = .{ '⠿', 0, 0 },
                     .len = @intCast(slice.len + 1),
                 } };
-                @memcpy(braille.single.arr[1 .. slice.len + 1], slice);
+                @memcpy(braille.single.buf[1 .. slice.len + 1], slice);
             },
             .jungsung => |jungsung| {
                 const slice = jungsungToBraille(jungsung.i);
                 braille = .{ .single = .{
-                    .arr = .{ '⠿', 0, 0 },
+                    .buf = .{ '⠿', 0, 0 },
                     .len = @intCast(slice.len + 1),
                 } };
-                @memcpy(braille.single.arr[1 .. slice.len + 1], slice);
+                @memcpy(braille.single.buf[1 .. slice.len + 1], slice);
             },
             .jongsung => |jongsung| {
                 const slice = jongsungToBraille(jongsung.i);
                 braille = .{ .single = .{
-                    .arr = .{ '⠿', 0, 0 },
+                    .buf = .{ '⠿', 0, 0 },
                     .len = @intCast(slice.len + 1),
                 } };
-                @memcpy(braille.single.arr[1 .. slice.len + 1], slice);
+                @memcpy(braille.single.buf[1 .. slice.len + 1], slice);
             },
             .composite => |composite| {
                 braille = .{
