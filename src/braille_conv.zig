@@ -1,18 +1,18 @@
 const std = @import("std");
 
-pub const KorCharBraille = union(enum) {
+pub const KorBrailleCluster = union(enum) {
     single: struct {
         arr: [3]u21,
-        len: u8,
-    },
-    abbrev: struct {
-        arr: [2]u21,
         len: u8,
     },
     composite: struct {
         chosung: []const u21,
         jungsung: []const u21,
         jongsung: []const u21,
+    },
+    abbrev: struct {
+        arr: [2]u21,
+        len: u8,
     },
 
     pub fn format(self: @This(), comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
@@ -23,11 +23,6 @@ pub const KorCharBraille = union(enum) {
             .single => |single| {
                 for (0..single.len) |i| {
                     try writer.print("{u}", .{single.arr[i]});
-                }
-            },
-            .abbrev => |abbrev| {
-                for (0..abbrev.len) |i| {
-                    try writer.print("{u}", .{abbrev.arr[i]});
                 }
             },
             .composite => |composite| {
@@ -41,11 +36,16 @@ pub const KorCharBraille = union(enum) {
                     try writer.print("{u}", .{code_point});
                 }
             },
+            .abbrev => |abbrev| {
+                for (0..abbrev.len) |i| {
+                    try writer.print("{u}", .{abbrev.arr[i]});
+                }
+            },
         }
     }
 };
 
-pub fn korWordToBraille(slice: []const u8, word_len: *usize) ?KorCharBraille {
+pub fn korWordToBraille(slice: []const u8, word_len: *usize) ?KorBrailleCluster {
     const words = struct {
         const kor = [_][]const u8{
             "래서",
@@ -74,7 +74,7 @@ pub fn korWordToBraille(slice: []const u8, word_len: *usize) ?KorCharBraille {
         return while (i < words.kor.len) : (i += 1) {
             if (std.mem.startsWith(u8, slice[3..], words.kor[i])) {
                 word_len.* = words.kor[i].len + 3;
-                break KorCharBraille{ .abbrev = .{
+                break KorBrailleCluster{ .abbrev = .{
                     .arr = .{ '⠁', words.braille[i] },
                     .len = 2,
                 } };
@@ -199,9 +199,9 @@ pub fn jongsungToBraille(index: u8) []const u21 {
     }
 }
 
-pub fn korCharToBraille(code_point: u21) ?KorCharBraille {
+pub fn korCharToBraille(code_point: u21) ?KorBrailleCluster {
     if (korCharToIndex(code_point)) |char_index| {
-        var braille: KorCharBraille = undefined;
+        var braille: KorBrailleCluster = undefined;
         switch (char_index) {
             .chosung => |chosung| {
                 const slice = chosungToBraille(chosung.i);
@@ -247,5 +247,29 @@ pub fn korCharToBraille(code_point: u21) ?KorCharBraille {
         return braille;
     } else {
         return null;
+    }
+}
+
+pub fn printKorAsBraille(writer: anytype, input: []const u8) !void {
+    var i: usize = 0;
+    var iter_utf8 = (try std.unicode.Utf8View.init(input)).iterator();
+    while (iter_utf8.nextCodepointSlice()) |code_point_slice| {
+        var offset = code_point_slice.len;
+        defer i += offset;
+
+        if (korWordToBraille(input[i..], &offset)) |braille| {
+            try writer.print("{s}", .{braille});
+            for (0..offset / 3 - 1) |_| {
+                _ = iter_utf8.nextCodepointSlice();
+            }
+            continue;
+        }
+
+        const code_point = try std.unicode.utf8Decode(code_point_slice);
+        if (korCharToBraille(code_point)) |braille| {
+            try writer.print("{s}", .{braille});
+        } else {
+            try writer.print("{u}", .{code_point});
+        }
     }
 }
