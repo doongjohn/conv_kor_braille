@@ -6,4 +6,5 @@ Based on: [2024 개정 한국 점자 규정](https://korean.go.kr/front_eng/down
 
 - 약자
 - 숫자
+- 문장부호
 - 영어
