@@ -1,5 +1,4 @@
 const std = @import("std");
-const unicode = std.unicode;
 
 const cli = @import("cli.zig");
 const braille_conv = @import("braille_conv.zig");
