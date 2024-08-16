@@ -252,20 +252,26 @@ pub fn korCharToBraille(code_point: u21) ?KorBrailleCluster {
 
 pub fn printKorAsBraille(writer: anytype, input: []const u8) !void {
     var i: usize = 0;
+    var is_prev_kor = false;
     var iter_utf8 = (try std.unicode.Utf8View.init(input)).iterator();
+
     while (iter_utf8.nextCodepointSlice()) |code_point_slice| {
         var offset = code_point_slice.len;
         defer i += offset;
 
-        if (korWordToBraille(input[i..], &offset)) |braille| {
-            try writer.print("{s}", .{braille});
-            for (0..offset / 3 - 1) |_| {
-                _ = iter_utf8.nextCodepointSlice();
+        const code_point = try std.unicode.utf8Decode(code_point_slice);
+        defer is_prev_kor = (code_point >= 0x3131 and code_point <= 0x3163) or (code_point >= 0xAC00 and code_point <= 0xD79D);
+
+        if (!is_prev_kor) {
+            if (korWordToBraille(input[i..], &offset)) |braille| {
+                try writer.print("{s}", .{braille});
+                for (0..offset / 3 - 1) |_| {
+                    _ = iter_utf8.nextCodepointSlice();
+                }
+                continue;
             }
-            continue;
         }
 
-        const code_point = try std.unicode.utf8Decode(code_point_slice);
         if (korCharToBraille(code_point)) |braille| {
             try writer.print("{s}", .{braille});
         } else {
