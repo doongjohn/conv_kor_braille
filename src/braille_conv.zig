@@ -1,12 +1,22 @@
 const std = @import("std");
 
-const kor_char_lookup = struct {
+const kor_utils = struct {
+    pub fn isSingleJamo(codepoint: u21) bool {
+        return codepoint >= 'ㄱ' and codepoint <= 'ㅣ';
+    }
+
+    pub fn isComposite(codepoint: u21) bool {
+        return codepoint >= '가' and codepoint <= '힣';
+    }
+};
+
+const kor_char_table = struct {
     const cho = [_]u21{ 'ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ' };
     const jung = [_]u21{ 'ㅏ', 'ㅐ', 'ㅑ', 'ㅒ', 'ㅓ', 'ㅔ', 'ㅕ', 'ㅖ', 'ㅗ', 'ㅘ', 'ㅙ', 'ㅚ', 'ㅛ', 'ㅜ', 'ㅝ', 'ㅞ', 'ㅟ', 'ㅠ', 'ㅡ', 'ㅢ', 'ㅣ' };
     const jong = [_]u21{ '?', 'ㄱ', 'ㄲ', 'ㄳ', 'ㄴ', 'ㄵ', 'ㄶ', 'ㄷ', 'ㄹ', 'ㄺ', 'ㄻ', 'ㄼ', 'ㄽ', 'ㄾ', 'ㄿ', 'ㅀ', 'ㅁ', 'ㅂ', 'ㅄ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ' };
 };
 
-const kor_braille_lookup = struct {
+const kor_braille_table = struct {
     const cho = [_]u21{ '⠈', 0, '⠉', '⠊', 1, '⠐', '⠑', '⠘', 2, '⠠', 3, '⠛', '⠨', 4, '⠰', '⠋', '⠓', '⠙', '⠚' };
     const cho2 = [_][2]u21{
         .{ '⠠', '⠈' }, // ㄲ
@@ -37,6 +47,39 @@ const kor_braille_lookup = struct {
         .{ '⠂', '⠴' }, // ㅀ
         .{ '⠃', '⠄' }, // ㅄ
     };
+
+    pub fn chosungToBraille(index: u8) []const u21 {
+        if (cho[index] <= 4) {
+            // chosung with 2 brailles
+            return &cho2[cho[index]];
+        } else {
+            // chosung with 1 braille
+            return cho[index .. index + 1];
+        }
+    }
+
+    pub fn jungsungToBraille(index: u8) []const u21 {
+        if (jung[index] <= 3) {
+            // jungsung with 2 brailles
+            return &jung2[jung[index]];
+        } else {
+            // jungsung with 1 braille
+            return jung[index .. index + 1];
+        }
+    }
+
+    pub fn jongsungToBraille(index: u8) []const u21 {
+        if (index == 0) {
+            // it has no jongsung
+            return &.{};
+        } else if (jong[index] <= 11) {
+            // jongsung with 2 brailles
+            return &jong2[jong[index]];
+        } else {
+            // jongsung with 1 braille
+            return jong[index .. index + 1];
+        }
+    }
 };
 
 pub const KorBrailleCluster = union(enum) {
@@ -69,7 +112,7 @@ pub const KorBrailleCluster = union(enum) {
         }
     }
 
-    pub fn asCodepointSlice(self: *const @This()) []const u21 {
+    pub fn asCodepoints(self: *const @This()) []const u21 {
         switch (self.*) {
             .single => |*single| {
                 return single.buf[0..single.len];
@@ -109,7 +152,110 @@ pub const KorBrailleCluster = union(enum) {
     }
 };
 
-pub fn korWordToBraille(slice: []const u8, word_len: *usize) ?KorBrailleCluster {
+pub const KorCharIndex = union(enum) {
+    chosung: struct {
+        i: u8,
+    },
+    jungsung: struct {
+        i: u8,
+    },
+    jongsung: struct {
+        i: u8,
+    },
+    composite: struct {
+        chosung_i: u8,
+        jungsung_i: u8,
+        jongsung_i: u8,
+    },
+};
+
+pub fn korCharToIndex(codepoint: u21) ?KorCharIndex {
+    if (kor_utils.isSingleJamo(codepoint)) {
+        if (std.mem.indexOf(u21, &kor_char_table.cho, &.{codepoint})) |i| {
+            return .{ .chosung = .{ .i = @intCast(i) } };
+        }
+        if (std.mem.indexOf(u21, &kor_char_table.jung, &.{codepoint})) |i| {
+            return .{ .jungsung = .{ .i = @intCast(i) } };
+        }
+        if (std.mem.indexOf(u21, &kor_char_table.jong, &.{codepoint})) |i| {
+            return .{ .jongsung = .{ .i = @intCast(i) } };
+        }
+    } else if (kor_utils.isComposite(codepoint)) {
+        const base = codepoint - '가';
+        return .{ .composite = .{
+            .chosung_i = @intCast(base / 28 / 21),
+            .jungsung_i = @intCast(base / 28 % 21),
+            .jongsung_i = @intCast(base % 28),
+        } };
+    }
+    return null;
+}
+
+pub fn korCharToBraille(codepoint: u21) ?KorBrailleCluster {
+    if (korCharToIndex(codepoint)) |char_index| {
+        var braille: KorBrailleCluster = undefined;
+        switch (char_index) {
+            .chosung => |chosung| {
+                const slice = kor_braille_table.chosungToBraille(chosung.i);
+                braille = .{ .single = .{
+                    .buf = .{ '⠿', 0, 0 },
+                    .len = @intCast(slice.len + 1),
+                } };
+                @memcpy(braille.single.buf[1 .. slice.len + 1], slice);
+            },
+            .jungsung => |jungsung| {
+                const slice = kor_braille_table.jungsungToBraille(jungsung.i);
+                braille = .{ .single = .{
+                    .buf = .{ '⠿', 0, 0 },
+                    .len = @intCast(slice.len + 1),
+                } };
+                @memcpy(braille.single.buf[1 .. slice.len + 1], slice);
+            },
+            .jongsung => |jongsung| {
+                const slice = kor_braille_table.jongsungToBraille(jongsung.i);
+                braille = .{ .single = .{
+                    .buf = .{ '⠿', 0, 0 },
+                    .len = @intCast(slice.len + 1),
+                } };
+                @memcpy(braille.single.buf[1 .. slice.len + 1], slice);
+            },
+            .composite => |composite| {
+                braille = .{ .composite = .{
+                    .buf = .{0} ** 6,
+                    .chosung = &.{},
+                    .jungsung = &.{},
+                    .jongsung = &.{},
+                } };
+                var i: u8 = 0;
+
+                // chosung
+                if (composite.chosung_i != 11) {
+                    // empty if chosung is 'ㅇ'
+                    const cho = kor_braille_table.chosungToBraille(composite.chosung_i);
+                    braille.composite.chosung = braille.composite.buf[i .. i + cho.len];
+                    @memcpy(braille.composite.chosung, cho);
+                    i += @intCast(cho.len);
+                }
+
+                // jungsung
+                const jung = kor_braille_table.jungsungToBraille(composite.jungsung_i);
+                braille.composite.jungsung = braille.composite.buf[i .. i + jung.len];
+                @memcpy(braille.composite.jungsung, jung);
+                i += @intCast(jung.len);
+
+                // jongsung
+                const jong = kor_braille_table.jongsungToBraille(composite.jongsung_i);
+                braille.composite.jongsung = braille.composite.buf[i .. i + jong.len];
+                @memcpy(braille.composite.jongsung, jong);
+            },
+        }
+        return braille;
+    } else {
+        return null;
+    }
+}
+
+pub fn korWordToBraille(input: []const u8, word_len: *usize) ?KorBrailleCluster {
     const words = struct {
         const kor = [_][]const u8{
             "래서",
@@ -131,12 +277,13 @@ pub fn korWordToBraille(slice: []const u8, word_len: *usize) ?KorBrailleCluster 
         };
     };
 
-    if (slice.len < 3 * 3 or !std.mem.startsWith(u8, slice, "그")) {
+    if (input.len < 3 * 3 or !std.mem.startsWith(u8, input, "그")) {
+        // null if slice is shorter than 3 korean characters or doesn't start with '그'
         return null;
     } else {
         var i: u8 = 0;
         return while (i < words.kor.len) : (i += 1) {
-            if (std.mem.startsWith(u8, slice[3..], words.kor[i])) {
+            if (std.mem.startsWith(u8, input[3..], words.kor[i])) {
                 word_len.* = words.kor[i].len + 3;
                 break KorBrailleCluster{ .abbrev = .{
                     .buf = .{ '⠁', words.braille[i] },
@@ -144,147 +291,6 @@ pub fn korWordToBraille(slice: []const u8, word_len: *usize) ?KorBrailleCluster 
                 } };
             }
         } else null;
-    }
-}
-
-pub const KorCharIndex = union(enum) {
-    chosung: struct {
-        i: u8,
-    },
-    jungsung: struct {
-        i: u8,
-    },
-    jongsung: struct {
-        i: u8,
-    },
-    composite: struct {
-        chosung_i: u8,
-        jungsung_i: u8,
-        jongsung_i: u8,
-    },
-};
-
-pub fn korCharToIndex(codepoint: u21) ?KorCharIndex {
-    const is_single_jamo = codepoint >= 0x3131 and codepoint <= 0x3163;
-    const is_composite = codepoint >= 0xAC00 and codepoint <= 0xD79D;
-    if (is_single_jamo) {
-        if (std.mem.indexOf(u21, &kor_char_lookup.cho, &.{codepoint})) |i| {
-            return .{ .chosung = .{ .i = @intCast(i) } };
-        }
-        if (std.mem.indexOf(u21, &kor_char_lookup.jung, &.{codepoint})) |i| {
-            return .{ .jungsung = .{ .i = @intCast(i) } };
-        }
-        if (std.mem.indexOf(u21, &kor_char_lookup.jong, &.{codepoint})) |i| {
-            return .{ .jongsung = .{ .i = @intCast(i) } };
-        }
-    } else if (is_composite) {
-        const base = codepoint - 0xAC00;
-        const cho: u8 = @intCast(base / 28 / 21);
-        const jung: u8 = @intCast(base / 28 % 21);
-        const jong: u8 = @intCast(base % 28);
-        return .{ .composite = .{
-            .chosung_i = cho,
-            .jungsung_i = jung,
-            .jongsung_i = jong,
-        } };
-    }
-    return null;
-}
-
-pub fn chosungToBraille(index: u8) []const u21 {
-    if (kor_braille_lookup.cho[index] <= 4) {
-        // chosung with 2 brailles
-        return &kor_braille_lookup.cho2[kor_braille_lookup.cho[index]];
-    } else {
-        // chosung with 1 braille
-        return kor_braille_lookup.cho[index .. index + 1];
-    }
-}
-
-pub fn jungsungToBraille(index: u8) []const u21 {
-    if (kor_braille_lookup.jung[index] <= 3) {
-        // jungsung with 2 brailles
-        return &kor_braille_lookup.jung2[kor_braille_lookup.jung[index]];
-    } else {
-        // jungsung with 1 braille
-        return kor_braille_lookup.jung[index .. index + 1];
-    }
-}
-
-pub fn jongsungToBraille(index: u8) []const u21 {
-    if (index == 0) {
-        // it has no jongsung
-        return &.{};
-    } else if (kor_braille_lookup.jong[index] <= 11) {
-        // jongsung with 2 brailles
-        return &kor_braille_lookup.jong2[kor_braille_lookup.jong[index]];
-    } else {
-        // jongsung with 1 braille
-        return kor_braille_lookup.jong[index .. index + 1];
-    }
-}
-
-pub fn korCharToBraille(codepoint: u21) ?KorBrailleCluster {
-    if (korCharToIndex(codepoint)) |char_index| {
-        var braille: KorBrailleCluster = undefined;
-        switch (char_index) {
-            .chosung => |chosung| {
-                const slice = chosungToBraille(chosung.i);
-                braille = .{ .single = .{
-                    .buf = .{ '⠿', 0, 0 },
-                    .len = @intCast(slice.len + 1),
-                } };
-                @memcpy(braille.single.buf[1 .. slice.len + 1], slice);
-            },
-            .jungsung => |jungsung| {
-                const slice = jungsungToBraille(jungsung.i);
-                braille = .{ .single = .{
-                    .buf = .{ '⠿', 0, 0 },
-                    .len = @intCast(slice.len + 1),
-                } };
-                @memcpy(braille.single.buf[1 .. slice.len + 1], slice);
-            },
-            .jongsung => |jongsung| {
-                const slice = jongsungToBraille(jongsung.i);
-                braille = .{ .single = .{
-                    .buf = .{ '⠿', 0, 0 },
-                    .len = @intCast(slice.len + 1),
-                } };
-                @memcpy(braille.single.buf[1 .. slice.len + 1], slice);
-            },
-            .composite => |composite| {
-                braille = .{ .composite = .{
-                    .buf = .{0} ** 6,
-                    .chosung = &.{},
-                    .jungsung = &.{},
-                    .jongsung = &.{},
-                } };
-                var i: u8 = 0;
-
-                // chosung
-                if (composite.chosung_i != 11) {
-                    // empty if chosung is 'ㅇ'
-                    const cho = chosungToBraille(composite.chosung_i);
-                    braille.composite.chosung = braille.composite.buf[i .. i + cho.len];
-                    @memcpy(braille.composite.chosung, cho);
-                    i += @intCast(cho.len);
-                }
-
-                // jungsung
-                const jung = jungsungToBraille(composite.jungsung_i);
-                braille.composite.jungsung = braille.composite.buf[i .. i + jung.len];
-                @memcpy(braille.composite.jungsung, jung);
-                i += @intCast(jung.len);
-
-                // jongsung
-                const jong = jongsungToBraille(composite.jongsung_i);
-                braille.composite.jongsung = braille.composite.buf[i .. i + jong.len];
-                @memcpy(braille.composite.jongsung, jong);
-            },
-        }
-        return braille;
-    } else {
-        return null;
     }
 }
 
@@ -298,11 +304,11 @@ pub fn arrayListAppendKorAsBraille(array_list: *std.ArrayList(u21), input: []con
         defer i += offset;
 
         const codepoint = try std.unicode.utf8Decode(codepoint_slice);
-        defer is_prev_kor = (codepoint >= 0x3131 and codepoint <= 0x3163) or (codepoint >= 0xAC00 and codepoint <= 0xD79D);
+        defer is_prev_kor = kor_utils.isSingleJamo(codepoint) or kor_utils.isComposite(codepoint);
 
         if (!is_prev_kor) {
             if (korWordToBraille(input[i..], &offset)) |braille| {
-                try array_list.appendSlice(braille.asCodepointSlice());
+                try array_list.appendSlice(braille.asCodepoints());
                 for (0..offset / 3 - 1) |_| {
                     _ = iter_utf8.nextCodepointSlice();
                 }
@@ -311,9 +317,9 @@ pub fn arrayListAppendKorAsBraille(array_list: *std.ArrayList(u21), input: []con
         }
 
         if (korCharToBraille(codepoint)) |braille| {
-            try array_list.appendSlice(braille.asCodepointSlice());
+            try array_list.appendSlice(braille.asCodepoints());
         } else {
-            try array_list.appendSlice(codepoint);
+            try array_list.appendSlice(&.{codepoint});
         }
     }
 }
@@ -328,7 +334,7 @@ pub fn printKorAsBraille(writer: anytype, input: []const u8) !void {
         defer i += offset;
 
         const codepoint = try std.unicode.utf8Decode(codepoint_slice);
-        defer is_prev_kor = (codepoint >= 0x3131 and codepoint <= 0x3163) or (codepoint >= 0xAC00 and codepoint <= 0xD79D);
+        defer is_prev_kor = kor_utils.isSingleJamo(codepoint) or kor_utils.isComposite(codepoint);
 
         if (!is_prev_kor) {
             if (korWordToBraille(input[i..], &offset)) |braille| {
