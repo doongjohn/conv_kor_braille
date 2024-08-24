@@ -324,7 +324,7 @@ pub fn arrayListAppendKorAsBraille(array_list: *std.ArrayList(u21), input: []con
     }
 }
 
-pub fn printKorAsBraille(writer: anytype, input: []const u8) !void {
+pub fn printKorAsBraille(writer: std.io.AnyWriter, input: []const u8) !void {
     var i: usize = 0;
     var is_prev_kor = false;
     var iter_utf8 = (try std.unicode.Utf8View.init(input)).iterator();
