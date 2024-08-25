@@ -11,27 +11,27 @@ const console_impl_windows = struct {
         extern "kernel32" fn ReadConsoleW(handle: win.HANDLE, buffer: [*]u16, len: win.DWORD, read: *win.DWORD, input_ctrl: ?*anyopaque) callconv(WINAPI) bool;
     };
 
-    fn readCodepoint() !u21 {
-        if (stdin_handle == std.os.windows.INVALID_HANDLE_VALUE) {
-            stdin_handle = std.io.getStdIn().handle;
-        }
+    fn init() void {
+        stdin_handle = std.io.getStdIn().handle;
+    }
 
-        var buf: [2]u16 = undefined;
+    fn readCodepoint() !u21 {
+        var code_units: [2]u16 = undefined;
         var read_count: u32 = undefined;
 
-        if (!win32.ReadConsoleW(std.io.getStdIn().handle, &buf, 1, &read_count, null)) {
+        if (!win32.ReadConsoleW(stdin_handle, &code_units, 1, &read_count, null)) {
             const err = std.os.windows.GetLastError();
             std.debug.panic("Windows API error: {}\n", .{err});
         }
 
-        if (try std.unicode.utf16CodeUnitSequenceLength(buf[0]) == 2) {
-            if (!win32.ReadConsoleW(std.io.getStdIn().handle, buf[1..], 1, &read_count, null)) {
+        if (try std.unicode.utf16CodeUnitSequenceLength(code_units[0]) == 2) {
+            if (!win32.ReadConsoleW(stdin_handle, code_units[1..], 1, &read_count, null)) {
                 const err = std.os.windows.GetLastError();
                 std.debug.panic("Windows API error: {}\n", .{err});
             }
-            return std.unicode.utf16DecodeSurrogatePair(&buf);
+            return std.unicode.utf16DecodeSurrogatePair(&code_units);
         } else {
-            return buf[0];
+            return code_units[0];
         }
     }
 };
@@ -39,14 +39,16 @@ const console_impl_windows = struct {
 const console_impl_unix = struct {
     const stdin_reader = std.io.getStdIn().reader();
 
+    fn init() void {}
+
     fn readCodepoint() !u21 {
-        var bytes: [4]u8 = .{0} ** 4;
-        try stdin_reader.readNoEof(bytes[0..1]);
-        const byte_len = try std.unicode.utf8ByteSequenceLength(bytes[0]);
-        if (byte_len > 1) {
-            try stdin_reader.readNoEof(bytes[1..byte_len]);
+        var code_units: [4]u8 = .{0} ** 4;
+        try stdin_reader.readNoEof(code_units[0..1]);
+        const len = try std.unicode.utf8ByteSequenceLength(code_units[0]);
+        if (len > 1) {
+            try stdin_reader.readNoEof(code_units[1..len]);
         }
-        return try std.unicode.utf8Decode(bytes[0..byte_len]);
+        return try std.unicode.utf8Decode(code_units[0..len]);
     }
 };
 
@@ -55,6 +57,10 @@ pub const console = struct {
         .windows => console_impl_windows,
         else => console_impl_unix,
     };
+
+    pub fn init() void {
+        return impl.init();
+    }
 
     pub fn readCodepoint() !u21 {
         return impl.readCodepoint();

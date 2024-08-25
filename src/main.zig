@@ -3,6 +3,8 @@ const cli = @import("cli.zig");
 const braille_conv = @import("braille_conv.zig");
 
 pub fn main() !void {
+    cli.console.init();
+
     var input_buf: [1000]u21 = undefined;
     const input = try cli.console.readLine(&input_buf);
 
