@@ -60,14 +60,18 @@ pub const console = struct {
         return impl.readCodepoint();
     }
 
-    pub fn readLine(buffer: []u21) ![]const u21 {
+    pub fn readUntilDelimiter(buffer: []u21, delimiter: []const u21) ![]const u21 {
         for (buffer, 0..) |*cp, i| {
             const codepoint = try readCodepoint();
-            if (codepoint == '\n' or codepoint == '\r') {
+            if (std.mem.indexOf(u21, delimiter, &.{codepoint})) |_| {
                 return buffer[0..i];
             }
             cp.* = codepoint;
         }
         return buffer;
+    }
+
+    pub fn readLine(buffer: []u21) ![]const u21 {
+        return try readUntilDelimiter(buffer, &.{ '\r', '\n' });
     }
 };
