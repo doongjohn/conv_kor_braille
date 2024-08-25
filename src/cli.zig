@@ -42,7 +42,7 @@ const console_impl_unix = struct {
     fn init() void {}
 
     fn readCodepoint() !u21 {
-        var code_units: [4]u8 = .{0} ** 4;
+        var code_units: [4]u8 = undefined;
         try stdin_reader.readNoEof(code_units[0..1]);
         const len = try std.unicode.utf8ByteSequenceLength(code_units[0]);
         if (len > 1) {
