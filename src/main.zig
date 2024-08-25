@@ -13,33 +13,33 @@ pub fn main() !void {
 test "single jamo" {
     const expectEqualSlices = std.testing.expectEqualSlices;
 
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('ㄱ').?.asCodepoints(), &[_]u21{ '⠿', '⠈' });
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('ㄲ').?.asCodepoints(), &[_]u21{ '⠿', '⠠', '⠈' });
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('ㄴ').?.asCodepoints(), &[_]u21{ '⠿', '⠉' });
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('ㄷ').?.asCodepoints(), &[_]u21{ '⠿', '⠊' });
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('ㄹ').?.asCodepoints(), &[_]u21{ '⠿', '⠐' });
+    try expectEqualSlices(u21, braille_conv.korCharToBraille('ㄱ').?.asCodepoints(), &.{ '⠿', '⠈' });
+    try expectEqualSlices(u21, braille_conv.korCharToBraille('ㄲ').?.asCodepoints(), &.{ '⠿', '⠠', '⠈' });
+    try expectEqualSlices(u21, braille_conv.korCharToBraille('ㄴ').?.asCodepoints(), &.{ '⠿', '⠉' });
+    try expectEqualSlices(u21, braille_conv.korCharToBraille('ㄷ').?.asCodepoints(), &.{ '⠿', '⠊' });
+    try expectEqualSlices(u21, braille_conv.korCharToBraille('ㄹ').?.asCodepoints(), &.{ '⠿', '⠐' });
 
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('ㅏ').?.asCodepoints(), &[_]u21{ '⠿', '⠣' });
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('ㅐ').?.asCodepoints(), &[_]u21{ '⠿', '⠗' });
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('ㅒ').?.asCodepoints(), &[_]u21{ '⠿', '⠜', '⠗' });
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('ㅚ').?.asCodepoints(), &[_]u21{ '⠿', '⠽' });
+    try expectEqualSlices(u21, braille_conv.korCharToBraille('ㅏ').?.asCodepoints(), &.{ '⠿', '⠣' });
+    try expectEqualSlices(u21, braille_conv.korCharToBraille('ㅐ').?.asCodepoints(), &.{ '⠿', '⠗' });
+    try expectEqualSlices(u21, braille_conv.korCharToBraille('ㅒ').?.asCodepoints(), &.{ '⠿', '⠜', '⠗' });
+    try expectEqualSlices(u21, braille_conv.korCharToBraille('ㅚ').?.asCodepoints(), &.{ '⠿', '⠽' });
 
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('ㄳ').?.asCodepoints(), &[_]u21{ '⠿', '⠁', '⠄' });
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('ㄵ').?.asCodepoints(), &[_]u21{ '⠿', '⠒', '⠅' });
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('ㄺ').?.asCodepoints(), &[_]u21{ '⠿', '⠂', '⠁' });
+    try expectEqualSlices(u21, braille_conv.korCharToBraille('ㄳ').?.asCodepoints(), &.{ '⠿', '⠁', '⠄' });
+    try expectEqualSlices(u21, braille_conv.korCharToBraille('ㄵ').?.asCodepoints(), &.{ '⠿', '⠒', '⠅' });
+    try expectEqualSlices(u21, braille_conv.korCharToBraille('ㄺ').?.asCodepoints(), &.{ '⠿', '⠂', '⠁' });
 }
 
 test "composite char" {
     const expectEqualSlices = std.testing.expectEqualSlices;
 
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('안').?.asCodepoints(), &[_]u21{ '⠣', '⠒' });
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('녕').?.asCodepoints(), &[_]u21{ '⠉', '⠱', '⠶' });
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('낮').?.asCodepoints(), &[_]u21{ '⠉', '⠣', '⠅' });
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('밤').?.asCodepoints(), &[_]u21{ '⠘', '⠣', '⠢' });
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('았').?.asCodepoints(), &[_]u21{ '⠣', '⠌' });
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('너').?.asCodepoints(), &[_]u21{ '⠉', '⠎' });
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('앉').?.asCodepoints(), &[_]u21{ '⠣', '⠒', '⠅' });
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('닭').?.asCodepoints(), &[_]u21{ '⠊', '⠣', '⠂', '⠁' });
+    try expectEqualSlices(u21, braille_conv.korCharToBraille('안').?.asCodepoints(), &.{ '⠣', '⠒' });
+    try expectEqualSlices(u21, braille_conv.korCharToBraille('녕').?.asCodepoints(), &.{ '⠉', '⠱', '⠶' });
+    try expectEqualSlices(u21, braille_conv.korCharToBraille('낮').?.asCodepoints(), &.{ '⠉', '⠣', '⠅' });
+    try expectEqualSlices(u21, braille_conv.korCharToBraille('밤').?.asCodepoints(), &.{ '⠘', '⠣', '⠢' });
+    try expectEqualSlices(u21, braille_conv.korCharToBraille('았').?.asCodepoints(), &.{ '⠣', '⠌' });
+    try expectEqualSlices(u21, braille_conv.korCharToBraille('너').?.asCodepoints(), &.{ '⠉', '⠎' });
+    try expectEqualSlices(u21, braille_conv.korCharToBraille('앉').?.asCodepoints(), &.{ '⠣', '⠒', '⠅' });
+    try expectEqualSlices(u21, braille_conv.korCharToBraille('닭').?.asCodepoints(), &.{ '⠊', '⠣', '⠂', '⠁' });
 }
 
 test "char abbrev" {
@@ -56,13 +56,13 @@ test "word abbrev" {
     const expectEqualSlices = std.testing.expectEqualSlices;
 
     var word_len: usize = 0;
-    try expectEqualSlices(u21, braille_conv.korWordToBraille(&.{ '그', '래', '서' }, &word_len).?.asCodepoints(), &[_]u21{ '⠁', '⠎' });
-    try expectEqualSlices(u21, braille_conv.korWordToBraille(&.{ '그', '러', '나' }, &word_len).?.asCodepoints(), &[_]u21{ '⠁', '⠉' });
-    try expectEqualSlices(u21, braille_conv.korWordToBraille(&.{ '그', '러', '면' }, &word_len).?.asCodepoints(), &[_]u21{ '⠁', '⠒' });
-    try expectEqualSlices(u21, braille_conv.korWordToBraille(&.{ '그', '러', '므', '로' }, &word_len).?.asCodepoints(), &[_]u21{ '⠁', '⠢' });
-    try expectEqualSlices(u21, braille_conv.korWordToBraille(&.{ '그', '런', '데' }, &word_len).?.asCodepoints(), &[_]u21{ '⠁', '⠝' });
-    try expectEqualSlices(u21, braille_conv.korWordToBraille(&.{ '그', '리', '고' }, &word_len).?.asCodepoints(), &[_]u21{ '⠁', '⠥' });
-    try expectEqualSlices(u21, braille_conv.korWordToBraille(&.{ '그', '리', '하', '여' }, &word_len).?.asCodepoints(), &[_]u21{ '⠁', '⠱' });
+    try expectEqualSlices(u21, braille_conv.korWordToBraille(&.{ '그', '래', '서' }, &word_len).?.asCodepoints(), &.{ '⠁', '⠎' });
+    try expectEqualSlices(u21, braille_conv.korWordToBraille(&.{ '그', '러', '나' }, &word_len).?.asCodepoints(), &.{ '⠁', '⠉' });
+    try expectEqualSlices(u21, braille_conv.korWordToBraille(&.{ '그', '러', '면' }, &word_len).?.asCodepoints(), &.{ '⠁', '⠒' });
+    try expectEqualSlices(u21, braille_conv.korWordToBraille(&.{ '그', '러', '므', '로' }, &word_len).?.asCodepoints(), &.{ '⠁', '⠢' });
+    try expectEqualSlices(u21, braille_conv.korWordToBraille(&.{ '그', '런', '데' }, &word_len).?.asCodepoints(), &.{ '⠁', '⠝' });
+    try expectEqualSlices(u21, braille_conv.korWordToBraille(&.{ '그', '리', '고' }, &word_len).?.asCodepoints(), &.{ '⠁', '⠥' });
+    try expectEqualSlices(u21, braille_conv.korWordToBraille(&.{ '그', '리', '하', '여' }, &word_len).?.asCodepoints(), &.{ '⠁', '⠱' });
 }
 
 test "sentence" {
@@ -73,6 +73,6 @@ test "sentence" {
     //     var arr = std.ArrayList(u21).init(std.testing.allocator);
     //     defer arr.deinit();
     //     try braille_conv.arrayListAppendKorAsBraille(&arr, "안녕하세요");
-    //     try expectEqualDeep(arr.items, &[_]u21{ '⠣', '⠒', '⠉', '⠻', '⠚', '⠠', '⠝', '⠬' });
+    //     try expectEqualDeep(arr.items, &.{ '⠣', '⠒', '⠉', '⠻', '⠚', '⠠', '⠝', '⠬' });
     // }
 }
