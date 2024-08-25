@@ -171,13 +171,13 @@ pub const KorCharIndex = union(enum) {
 
 pub fn korCharToIndex(codepoint: u21) ?KorCharIndex {
     if (kor_utils.isSingleJamo(codepoint)) {
-        if (std.mem.indexOf(u21, &kor_char_table.cho, &.{codepoint})) |i| {
+        if (std.mem.indexOfScalar(u21, &kor_char_table.cho, codepoint)) |i| {
             return .{ .choseong = .{ .i = @intCast(i) } };
         }
-        if (std.mem.indexOf(u21, &kor_char_table.jung, &.{codepoint})) |i| {
+        if (std.mem.indexOfScalar(u21, &kor_char_table.jung, codepoint)) |i| {
             return .{ .jungseong = .{ .i = @intCast(i) } };
         }
-        if (std.mem.indexOf(u21, &kor_char_table.jong, &.{codepoint})) |i| {
+        if (std.mem.indexOfScalar(u21, &kor_char_table.jong, codepoint)) |i| {
             return .{ .jongseong = .{ .i = @intCast(i) } };
         }
     } else if (kor_utils.isComposite(codepoint)) {

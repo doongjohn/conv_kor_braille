@@ -69,7 +69,7 @@ pub const console = struct {
     pub fn readUntilDelimiter(buffer: []u21, delimiter: []const u21) ![]const u21 {
         for (buffer, 0..) |*cp, i| {
             const codepoint = try readCodepoint();
-            if (std.mem.indexOf(u21, delimiter, &.{codepoint})) |_| {
+            if (std.mem.indexOfScalar(u21, delimiter, codepoint)) |_| {
                 return buffer[0..i];
             }
             cp.* = codepoint;
