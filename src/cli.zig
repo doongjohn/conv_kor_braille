@@ -19,12 +19,16 @@ const console_impl_windows = struct {
         var buf: [2]u16 = undefined;
         var read_count: u32 = undefined;
 
-        if (!win32.ReadConsoleW(std.io.getStdIn().handle, &buf, 1, &read_count, null))
-            return error.ReadConsoleError;
+        if (!win32.ReadConsoleW(std.io.getStdIn().handle, &buf, 1, &read_count, null)) {
+            const err = std.os.windows.GetLastError();
+            std.debug.panic("Windows API error: {}\n", .{err});
+        }
 
-        if (std.unicode.utf16IsHighSurrogate(buf[0])) {
-            if (!win32.ReadConsoleW(std.io.getStdIn().handle, buf[1..], 1, &read_count, null))
-                return error.ReadConsoleError;
+        if (try std.unicode.utf16CodeUnitSequenceLength(buf[0]) == 2) {
+            if (!win32.ReadConsoleW(std.io.getStdIn().handle, buf[1..], 1, &read_count, null)) {
+                const err = std.os.windows.GetLastError();
+                std.debug.panic("Windows API error: {}\n", .{err});
+            }
             return std.unicode.utf16DecodeSurrogatePair(&buf);
         } else {
             return buf[0];
@@ -36,11 +40,13 @@ const console_impl_unix = struct {
     const stdin_reader = std.io.getStdIn().reader();
 
     fn readCodepoint() !u21 {
-        var buf: [4]u8 = .{0} ** 4;
-        buf[0] = try stdin_reader.readByte();
-        const byte_len = try std.unicode.utf8ByteSequenceLength(buf[0]);
-        _ = try stdin_reader.readAtLeast(buf[1..], byte_len - 1);
-        return try std.unicode.utf8Decode(buf[0..byte_len]);
+        var bytes: [4]u8 = .{0} ** 4;
+        try stdin_reader.readNoEof(bytes[0..1]);
+        const byte_len = try std.unicode.utf8ByteSequenceLength(bytes[0]);
+        if (byte_len > 1) {
+            try stdin_reader.readNoEof(bytes[1..byte_len]);
+        }
+        return try std.unicode.utf8Decode(bytes[0..byte_len]);
     }
 };
 
@@ -57,8 +63,8 @@ pub const console = struct {
     pub fn readLine(buffer: []u21) ![]const u21 {
         for (buffer, 0..) |*cp, i| {
             const codepoint = try readCodepoint();
-            if (codepoint == '\n') {
-                return std.mem.trimRight(u21, buffer[0..i], &[_]u21{ '\r', '\n' });
+            if (codepoint == '\n' or codepoint == '\r') {
+                return buffer[0..i];
             }
             cp.* = codepoint;
         }
