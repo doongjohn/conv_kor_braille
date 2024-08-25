@@ -1,11 +1,10 @@
 const std = @import("std");
-
 const cli = @import("cli.zig");
 const braille_conv = @import("braille_conv.zig");
 
 pub fn main() !void {
-    var input_buf: [1000]u8 = undefined;
-    const input = try cli.stdinReadLine(&input_buf);
+    var input_buf: [1000]u21 = undefined;
+    const input = try cli.console.readLine(&input_buf);
 
     const stdout_writer = std.io.getStdOut().writer();
     try braille_conv.printKorAsBraille(stdout_writer.any(), input);
@@ -57,13 +56,13 @@ test "word abbrev" {
     const expectEqualSlices = std.testing.expectEqualSlices;
 
     var word_len: usize = 0;
-    try expectEqualSlices(u21, braille_conv.korWordToBraille("그래서", &word_len).?.asCodepoints(), &[_]u21{ '⠁', '⠎' });
-    try expectEqualSlices(u21, braille_conv.korWordToBraille("그러나", &word_len).?.asCodepoints(), &[_]u21{ '⠁', '⠉' });
-    try expectEqualSlices(u21, braille_conv.korWordToBraille("그러면", &word_len).?.asCodepoints(), &[_]u21{ '⠁', '⠒' });
-    try expectEqualSlices(u21, braille_conv.korWordToBraille("그러므로", &word_len).?.asCodepoints(), &[_]u21{ '⠁', '⠢' });
-    try expectEqualSlices(u21, braille_conv.korWordToBraille("그런데", &word_len).?.asCodepoints(), &[_]u21{ '⠁', '⠝' });
-    try expectEqualSlices(u21, braille_conv.korWordToBraille("그리고", &word_len).?.asCodepoints(), &[_]u21{ '⠁', '⠥' });
-    try expectEqualSlices(u21, braille_conv.korWordToBraille("그리하여", &word_len).?.asCodepoints(), &[_]u21{ '⠁', '⠱' });
+    try expectEqualSlices(u21, braille_conv.korWordToBraille(&.{ '그', '래', '서' }, &word_len).?.asCodepoints(), &[_]u21{ '⠁', '⠎' });
+    try expectEqualSlices(u21, braille_conv.korWordToBraille(&.{ '그', '러', '나' }, &word_len).?.asCodepoints(), &[_]u21{ '⠁', '⠉' });
+    try expectEqualSlices(u21, braille_conv.korWordToBraille(&.{ '그', '러', '면' }, &word_len).?.asCodepoints(), &[_]u21{ '⠁', '⠒' });
+    try expectEqualSlices(u21, braille_conv.korWordToBraille(&.{ '그', '러', '므', '로' }, &word_len).?.asCodepoints(), &[_]u21{ '⠁', '⠢' });
+    try expectEqualSlices(u21, braille_conv.korWordToBraille(&.{ '그', '런', '데' }, &word_len).?.asCodepoints(), &[_]u21{ '⠁', '⠝' });
+    try expectEqualSlices(u21, braille_conv.korWordToBraille(&.{ '그', '리', '고' }, &word_len).?.asCodepoints(), &[_]u21{ '⠁', '⠥' });
+    try expectEqualSlices(u21, braille_conv.korWordToBraille(&.{ '그', '리', '하', '여' }, &word_len).?.asCodepoints(), &[_]u21{ '⠁', '⠱' });
 }
 
 test "sentence" {

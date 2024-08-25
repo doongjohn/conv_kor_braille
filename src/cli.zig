@@ -1,27 +1,67 @@
 const builtin = @import("builtin");
 const std = @import("std");
 
-const win32 = if (builtin.os.tag == .windows) struct {
-    const win = std.os.windows;
-    const WINAPI = win.WINAPI;
+const console_impl_windows = struct {
+    var stdin_handle = std.os.windows.INVALID_HANDLE_VALUE;
 
-    extern "kernel32" fn ReadConsoleW(handle: win.HANDLE, buffer: [*]u16, len: win.DWORD, read: *win.DWORD, input_ctrl: ?*anyopaque) callconv(WINAPI) bool;
+    const win32 = struct {
+        const win = std.os.windows;
+        const WINAPI = win.WINAPI;
+
+        extern "kernel32" fn ReadConsoleW(handle: win.HANDLE, buffer: [*]u16, len: win.DWORD, read: *win.DWORD, input_ctrl: ?*anyopaque) callconv(WINAPI) bool;
+    };
+
+    fn readCodepoint() !u21 {
+        if (stdin_handle == std.os.windows.INVALID_HANDLE_VALUE) {
+            stdin_handle = std.io.getStdIn().handle;
+        }
+
+        var buf: [2]u16 = undefined;
+        var read_count: u32 = undefined;
+
+        if (!win32.ReadConsoleW(std.io.getStdIn().handle, &buf, 1, &read_count, null))
+            return error.ReadConsoleError;
+
+        if (std.unicode.utf16IsHighSurrogate(buf[0])) {
+            if (!win32.ReadConsoleW(std.io.getStdIn().handle, buf[1..], 1, &read_count, null))
+                return error.ReadConsoleError;
+            return std.unicode.utf16DecodeSurrogatePair(&buf);
+        } else {
+            return buf[0];
+        }
+    }
 };
 
-pub fn stdinReadLine(buffer: []u8) ![]const u8 {
-    switch (builtin.os.tag) {
-        .windows => {
-            var utf16_buf: [10000]u16 = undefined;
-            var utf16_read_count: u32 = undefined;
-            if (!win32.ReadConsoleW(std.io.getStdIn().handle, &utf16_buf, utf16_buf.len, &utf16_read_count, null))
-                return error.ReadConsoleError;
+const console_impl_unix = struct {
+    const stdin_reader = std.io.getStdIn().reader();
 
-            const utf8_len = try std.unicode.utf16LeToUtf8(buffer, utf16_buf[0..utf16_read_count]);
-            return std.mem.trimRight(u8, buffer[0..utf8_len], "\r\n");
-        },
-        else => {
-            const stdin = std.io.getStdIn().reader();
-            return std.mem.trimRight(u8, try stdin.readUntilDelimiter(buffer, '\n'), "\n");
-        },
+    fn readCodepoint() !u21 {
+        var buf: [4]u8 = .{0} ** 4;
+        buf[0] = try stdin_reader.readByte();
+        const byte_len = try std.unicode.utf8ByteSequenceLength(buf[0]);
+        _ = try stdin_reader.readAtLeast(buf[1..], byte_len - 1);
+        return try std.unicode.utf8Decode(buf[0..byte_len]);
     }
-}
+};
+
+pub const console = struct {
+    const impl = switch (builtin.os.tag) {
+        .windows => console_impl_windows,
+        else => console_impl_unix,
+    };
+
+    pub fn readCodepoint() !u21 {
+        return impl.readCodepoint();
+    }
+
+    pub fn readLine(buffer: []u21) ![]const u21 {
+        for (buffer, 0..) |*cp, i| {
+            const codepoint = try readCodepoint();
+            if (codepoint == '\n') {
+                return std.mem.trimRight(u21, buffer[0..i], &[_]u21{ '\r', '\n' });
+            }
+            cp.* = codepoint;
+        }
+        return buffer;
+    }
+};
