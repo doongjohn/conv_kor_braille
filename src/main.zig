@@ -2,17 +2,27 @@ const std = @import("std");
 const cli = @import("cli.zig");
 const braille_conv = @import("braille_conv.zig");
 
+const CodepointIterator = @import("codepoint_iter.zig").CodepointIterator;
+const StdInCodepointIterator = CodepointIterator(cli.console, cli.ConsoleReadError);
+
 pub fn main() !void {
     cli.console.init();
 
-    var input_buf: [1000]u21 = undefined;
-    const input = try cli.console.readLine(&input_buf);
+    var input_buf: [4]u21 = undefined;
+    var input_peek_buf: [4]u21 = undefined;
+    var stdin_iter = StdInCodepointIterator.init(
+        undefined,
+        &cli.console.methods.readCodepoint,
+        &input_buf,
+        &input_peek_buf,
+    );
 
     const stdout_writer = std.io.getStdOut().writer();
-    try braille_conv.printKorAsBraille(stdout_writer.any(), input);
+    try braille_conv.writeUntilDelimiter(stdout_writer.any(), &stdin_iter, &.{'\n'});
+    try cli.console.print("\n", .{});
 }
 
-test "single jamo" {
+test "jamo" {
     const expectEqualSlices = std.testing.expectEqualSlices;
 
     try expectEqualSlices(u21, braille_conv.korCharToBraille('ㄱ').?.asCodepoints(), &.{ '⠿', '⠈' });
@@ -54,27 +64,87 @@ test "char abbrev" {
     // 성 썽 정 쩡 청
 }
 
+fn readCodepoint(reader: std.io.AnyReader) !u21 {
+    const builtin = @import("builtin");
+    return @truncate(try reader.readInt(u32, builtin.cpu.arch.endian()));
+}
+
 test "word abbrev" {
+    const TestCodepointIterator = CodepointIterator(std.io.AnyReader, std.io.AnyReader.Error);
+
+    var buffer: [16]u8 align(@alignOf(u32)) = undefined;
+    const buffer_ptr: [*]u32 = @ptrCast(&buffer);
+
+    var fbs = std.io.fixedBufferStream(&buffer);
+    const reader = fbs.reader();
+
+    var input_buf: [4]u21 = undefined;
+    var input_peek_buf: [4]u21 = undefined;
+    var input_iter = TestCodepointIterator.init(
+        reader.any(),
+        &readCodepoint,
+        &input_buf,
+        &input_peek_buf,
+    );
+
+    const inputs = [_][]const u32{
+        &.{ '그', '래', '서' },
+        &.{ '그', '러', '나' },
+        &.{ '그', '러', '면' },
+        &.{ '그', '러', '므', '로' },
+        &.{ '그', '런', '데' },
+        &.{ '그', '리', '고' },
+        &.{ '그', '리', '하', '여' },
+    };
+    const outputs = [_][]const u21{
+        &.{ '⠁', '⠎' }, // 그래서
+        &.{ '⠁', '⠉' }, // 그러나
+        &.{ '⠁', '⠒' }, // 그러면
+        &.{ '⠁', '⠢' }, // 그러므로
+        &.{ '⠁', '⠝' }, // 그런데
+        &.{ '⠁', '⠥' }, // 그리고
+        &.{ '⠁', '⠱' }, // 그리하여
+    };
+
     const expectEqualSlices = std.testing.expectEqualSlices;
 
-    var word_len: usize = 0;
-    try expectEqualSlices(u21, braille_conv.korWordToBraille(&.{ '그', '래', '서' }, &word_len).?.asCodepoints(), &.{ '⠁', '⠎' });
-    try expectEqualSlices(u21, braille_conv.korWordToBraille(&.{ '그', '러', '나' }, &word_len).?.asCodepoints(), &.{ '⠁', '⠉' });
-    try expectEqualSlices(u21, braille_conv.korWordToBraille(&.{ '그', '러', '면' }, &word_len).?.asCodepoints(), &.{ '⠁', '⠒' });
-    try expectEqualSlices(u21, braille_conv.korWordToBraille(&.{ '그', '러', '므', '로' }, &word_len).?.asCodepoints(), &.{ '⠁', '⠢' });
-    try expectEqualSlices(u21, braille_conv.korWordToBraille(&.{ '그', '런', '데' }, &word_len).?.asCodepoints(), &.{ '⠁', '⠝' });
-    try expectEqualSlices(u21, braille_conv.korWordToBraille(&.{ '그', '리', '고' }, &word_len).?.asCodepoints(), &.{ '⠁', '⠥' });
-    try expectEqualSlices(u21, braille_conv.korWordToBraille(&.{ '그', '리', '하', '여' }, &word_len).?.asCodepoints(), &.{ '⠁', '⠱' });
+    for (inputs, outputs) |input, output| {
+        fbs.reset();
+        input_iter.reset();
+        @memcpy(buffer_ptr, input);
+        try expectEqualSlices(u21, (try braille_conv.korWordToBraille(&input_iter)).?.asCodepoints(), output);
+    }
 }
 
 test "sentence" {
-    // TODO
-    // const expectEqualDeep = std.testing.expectEqualDeep;
+    // const TestCodepointIterator = CodepointIterator(std.io.AnyReader, std.io.AnyReader.Error);
     //
-    // {
-    //     var arr = std.ArrayList(u21).init(std.testing.allocator);
-    //     defer arr.deinit();
-    //     try braille_conv.arrayListAppendKorAsBraille(&arr, "안녕하세요");
-    //     try expectEqualDeep(arr.items, &.{ '⠣', '⠒', '⠉', '⠻', '⠚', '⠠', '⠝', '⠬' });
+    // var buffer: [16]u8 align(@alignOf(u32)) = undefined;
+    // const buffer_ptr: [*]u32 = @ptrCast(&buffer);
+    //
+    // var fbs = std.io.fixedBufferStream(&buffer);
+    // const reader = fbs.reader();
+    //
+    // var input_buf: [4]u21 = undefined;
+    // var input_peek_buf: [4]u21 = undefined;
+    // var input_iter = TestCodepointIterator.init(
+    //     reader.any(),
+    //     &readCodepoint,
+    //     &input_buf,
+    //     &input_peek_buf,
+    // );
+    //
+    // const inputs = [_][]const u32{
+    //     &.{ '안', '녕', '하', '세', '요' },
+    // };
+    // const outputs = [_][]const u21{
+    //     &.{ '⠣', '⠒', '⠉', '⠻', '⠚', '⠠', '⠝', '⠬' }, // 안녕하세요
+    // };
+    //
+    // for (inputs, outputs) |input, output| {
+    //     fbs.reset();
+    //     input_iter.reset();
+    //     @memcpy(buffer_ptr, input);
+    //     // TODO
     // }
 }

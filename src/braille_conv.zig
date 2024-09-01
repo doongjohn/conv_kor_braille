@@ -1,12 +1,16 @@
 const std = @import("std");
 
 const kor_utils = struct {
-    pub fn isSingleJamo(codepoint: u21) bool {
+    pub fn isJamo(codepoint: u21) bool {
         return codepoint >= 'ㄱ' and codepoint <= 'ㅣ';
     }
 
     pub fn isComposite(codepoint: u21) bool {
         return codepoint >= '가' and codepoint <= '힣';
+    }
+
+    pub fn isCharacter(codepoint: u21) bool {
+        return isJamo(codepoint) or isComposite(codepoint);
     }
 };
 
@@ -170,7 +174,7 @@ pub const KorCharIndex = union(enum) {
 };
 
 pub fn korCharToIndex(codepoint: u21) ?KorCharIndex {
-    if (kor_utils.isSingleJamo(codepoint)) {
+    if (kor_utils.isJamo(codepoint)) {
         if (std.mem.indexOfScalar(u21, &kor_char_table.cho, codepoint)) |i| {
             return .{ .choseong = .{ .i = @intCast(i) } };
         }
@@ -255,7 +259,13 @@ pub fn korCharToBraille(codepoint: u21) ?KorBrailleCluster {
     }
 }
 
-pub fn korWordToBraille(input: []const u21, word_len: *usize) ?KorBrailleCluster {
+pub fn korWordToBraille(codepoint_iter: anytype) !?KorBrailleCluster {
+    const slice = try codepoint_iter.peekUntilDelimiter(4, &.{'\n'});
+
+    if (slice.len < 2 or slice[0] != '그') {
+        return null;
+    }
+
     const words = struct {
         const kor = [_][]const u21{
             &.{ '래', '서' },
@@ -277,43 +287,59 @@ pub fn korWordToBraille(input: []const u21, word_len: *usize) ?KorBrailleCluster
         };
     };
 
-    if (input.len < 3 or !std.mem.startsWith(u21, input, &.{'그'})) {
-        // null if slice is shorter than 3 characters or doesn't start with '그'
-        return null;
-    } else {
-        var i: u8 = 0;
-        return while (i < words.kor.len) : (i += 1) {
-            if (std.mem.startsWith(u21, input[1..], words.kor[i])) {
-                word_len.* = words.kor[i].len;
-                break KorBrailleCluster{ .abbrev = .{
-                    .buf = .{ '⠁', words.braille[i] },
-                    .len = 2,
-                } };
-            }
-        } else null;
-    }
+    // find word
+    var i: u8 = 0;
+    return while (i < words.kor.len) : (i += 1) {
+        if (std.mem.startsWith(u21, slice[1..], words.kor[i])) {
+            try codepoint_iter.skip(words.kor[i].len + 1);
+            // return abbrev
+            break .{ .abbrev = .{
+                .buf = .{ '⠁', words.braille[i] },
+                .len = 2,
+            } };
+        }
+    } else null;
 }
 
-pub fn printKorAsBraille(writer: std.io.AnyWriter, input: []const u21) !void {
-    var i: usize = 0;
+/// Converts input codepoints to braille and writes it to the writer.
+/// It writes until it encounters a delimiter. (exclusive)
+/// Size of codepoint_iter's `buffer` and `peek_buffer` must be at least 4.
+pub fn writeUntilDelimiter(writer: std.io.AnyWriter, codepoint_iter: anytype, delimiter: []const u21) !void {
+    std.debug.assert(codepoint_iter.ring_buffer.buffer.len >= 4);
+    std.debug.assert(codepoint_iter.peek_buffer.len >= 4);
+
     var is_prev_kor = false;
 
-    while (i < input.len) {
-        var offset: usize = 1;
-        defer i += offset;
-        defer is_prev_kor = kor_utils.isSingleJamo(input[i]) or kor_utils.isComposite(input[i]);
+    while (true) {
+        // read codepoint
+        const codepoint = codepoint_iter.peek() catch |err| {
+            switch (err) {
+                error.EndOfStream => break,
+                else => return err,
+            }
+        };
 
+        // check delimiter
+        if (std.mem.indexOfScalar(u21, delimiter, codepoint)) |_| {
+            break;
+        }
+
+        // convert word
+        defer is_prev_kor = kor_utils.isCharacter(codepoint);
         if (!is_prev_kor) {
-            if (korWordToBraille(input[i..], &offset)) |braille| {
+            if (try korWordToBraille(codepoint_iter)) |braille| {
                 try writer.print("{s}", .{braille});
                 continue;
             }
         }
 
-        if (korCharToBraille(input[i])) |braille| {
+        // convert character
+        if (korCharToBraille(codepoint)) |braille| {
             try writer.print("{s}", .{braille});
         } else {
-            try writer.print("{u}", .{input[i]});
+            try writer.print("{u}", .{codepoint});
         }
+
+        try codepoint_iter.skip(1);
     }
 }

@@ -1,8 +1,20 @@
 const builtin = @import("builtin");
 const std = @import("std");
 
+pub const ConsoleReadError = error{
+    Utf8InvalidStartByte,
+    Utf8ExpectedContinuation,
+    Utf8OverlongEncoding,
+    Utf8EncodesSurrogateHalf,
+    Utf8CodepointTooLarge,
+    Utf16InvalidStartCodeUnit,
+    ExpectedSecondSurrogateHalf,
+    EndOfStream,
+} || std.posix.ReadError;
+
 const console_impl_windows = struct {
     var stdin_handle = std.os.windows.INVALID_HANDLE_VALUE;
+    var stdout_writer: std.fs.File.Writer = undefined;
 
     const win32 = struct {
         const win = std.os.windows;
@@ -13,9 +25,10 @@ const console_impl_windows = struct {
 
     fn init() void {
         stdin_handle = std.io.getStdIn().handle;
+        stdout_writer = std.io.getStdOut().writer();
     }
 
-    fn readCodepoint() !u21 {
+    fn readCodepoint() ConsoleReadError!u21 {
         var code_units: [2]u16 = undefined;
         var read_count: u32 = undefined;
 
@@ -29,7 +42,7 @@ const console_impl_windows = struct {
                 const err = std.os.windows.GetLastError();
                 std.debug.panic("Windows API error: {}\n", .{err});
             }
-            return std.unicode.utf16DecodeSurrogatePair(&code_units);
+            return try std.unicode.utf16DecodeSurrogatePair(&code_units);
         } else {
             return code_units[0];
         }
@@ -38,10 +51,11 @@ const console_impl_windows = struct {
 
 const console_impl_unix = struct {
     const stdin_reader = std.io.getStdIn().reader();
+    const stdout_writer = std.io.getStdOut().writer();
 
     fn init() void {}
 
-    fn readCodepoint() !u21 {
+    fn readCodepoint() ConsoleReadError!u21 {
         var code_units: [4]u8 = undefined;
         try stdin_reader.readNoEof(code_units[0..1]);
         const len = try std.unicode.utf8ByteSequenceLength(code_units[0]);
@@ -62,11 +76,15 @@ pub const console = struct {
         return impl.init();
     }
 
-    pub fn readCodepoint() !u21 {
+    pub fn print(comptime format: []const u8, args: anytype) !void {
+        try impl.stdout_writer.print(format, args);
+    }
+
+    pub fn readCodepoint() ConsoleReadError!u21 {
         return impl.readCodepoint();
     }
 
-    pub fn readUntilDelimiter(buffer: []u21, delimiter: []const u21) ![]const u21 {
+    pub fn readUntilDelimiter(buffer: []u21, delimiter: []const u21) ConsoleReadError![]const u21 {
         for (buffer, 0..) |*cp, i| {
             const codepoint = try readCodepoint();
             if (std.mem.indexOfScalar(u21, delimiter, codepoint)) |_| {
@@ -77,7 +95,27 @@ pub const console = struct {
         return buffer;
     }
 
-    pub fn readLine(buffer: []u21) ![]const u21 {
+    pub fn readLine(buffer: []u21) ConsoleReadError![]const u21 {
         return try readUntilDelimiter(buffer, &.{ '\r', '\n' });
     }
+
+    const Self = @This();
+
+    pub const methods = struct {
+        pub fn print(_: Self, comptime format: []const u8, args: anytype) !void {
+            try Self.print(format, args);
+        }
+
+        pub fn readCodepoint(_: Self) ConsoleReadError!u21 {
+            return try Self.readCodepoint();
+        }
+
+        pub fn readUntilDelimiter(_: Self, buffer: []u21, delimiter: []const u21) ConsoleReadError![]const u21 {
+            return try Self.readUntilDelimiter(buffer, delimiter);
+        }
+
+        pub fn readLine(_: Self, buffer: []u21) ConsoleReadError![]const u21 {
+            return try Self.readLine(buffer);
+        }
+    };
 };
