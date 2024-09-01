@@ -259,8 +259,8 @@ pub fn korCharToBraille(codepoint: u21) ?KorBrailleCluster {
     }
 }
 
-pub fn korWordToBraille(codepoint_iter: anytype) !?KorBrailleCluster {
-    const slice = try codepoint_iter.peekUntilDelimiter(4, &.{'\n'});
+pub fn korWordToBraille(codepoint_iter: anytype, delimiter: []const u21) !?KorBrailleCluster {
+    const slice = try codepoint_iter.peekUntilDelimiter(4, delimiter);
 
     if (slice.len < 2 or slice[0] != '그') {
         return null;
@@ -327,7 +327,7 @@ pub fn writeUntilDelimiter(writer: std.io.AnyWriter, codepoint_iter: anytype, de
         // convert word
         defer is_prev_kor = kor_utils.isCharacter(codepoint);
         if (!is_prev_kor) {
-            if (try korWordToBraille(codepoint_iter)) |braille| {
+            if (try korWordToBraille(codepoint_iter, delimiter)) |braille| {
                 try writer.print("{s}", .{braille});
                 continue;
             }

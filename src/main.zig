@@ -17,8 +17,10 @@ pub fn main() !void {
         &input_peek_buf,
     );
 
-    const stdout_writer = std.io.getStdOut().writer();
-    try braille_conv.writeUntilDelimiter(stdout_writer.any(), &stdin_iter, &.{'\n'});
+    var buf = std.io.bufferedWriter(std.io.getStdOut().writer());
+    try braille_conv.writeUntilDelimiter(buf.writer().any(), &stdin_iter, &.{'\n'});
+    try buf.flush();
+
     try cli.console.print("\n", .{});
 }
 
@@ -112,7 +114,7 @@ test "word abbrev" {
         fbs.reset();
         input_iter.reset();
         @memcpy(buffer_ptr, input);
-        try expectEqualSlices(u21, (try braille_conv.korWordToBraille(&input_iter)).?.asCodepoints(), output);
+        try expectEqualSlices(u21, (try braille_conv.korWordToBraille(&input_iter, &.{})).?.asCodepoints(), output);
     }
 }
 
