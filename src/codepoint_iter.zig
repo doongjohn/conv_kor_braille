@@ -30,30 +30,25 @@ pub fn CodepointIterator(Context: type, ReadError: type) type {
         }
 
         pub fn next(self: *@This()) !u21 {
-            if (self.ring_buffer.size > 0) {
-                return try self.ring_buffer.popFront();
-            } else {
+            if (self.ring_buffer.size == 0) {
                 return try self.readFn(self.context);
+            } else {
+                return try self.ring_buffer.popFront();
             }
         }
 
         pub fn peek(self: *@This()) !u21 {
-            if (self.ring_buffer.isFull()) {
-                return error.BufferToSmall;
-            }
-
-            if (self.ring_buffer.size < 1) {
+            if (self.ring_buffer.size == 0) {
                 const codepoint = try self.readFn(self.context);
                 try self.ring_buffer.pushBack(codepoint);
             }
-
             return try self.ring_buffer.getFront();
         }
 
         /// Peek `n` items and return it as a slice.
         /// Returned slice is valid until `fn next` or `fn skip` is called.
         pub fn peekUntilDelimiter(self: *@This(), n: usize, delimiter: []const u21) ![]const u21 {
-            if (n == 0 or self.ring_buffer.isFull()) {
+            if (n == 0 or self.ring_buffer.buffer.len < n) {
                 return &.{};
             }
 
@@ -85,7 +80,7 @@ pub fn CodepointIterator(Context: type, ReadError: type) type {
                 }
             }
 
-            // return slice
+            // Return as slice
             if (self.ring_buffer.head <= self.ring_buffer.tail) {
                 return self.ring_buffer.buffer[self.ring_buffer.head .. self.ring_buffer.tail + 1];
             } else {
