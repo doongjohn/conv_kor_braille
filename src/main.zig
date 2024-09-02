@@ -24,9 +24,10 @@ pub fn main() !void {
     try cli.console.print("\n", .{});
 }
 
-test "jamo" {
-    const expectEqualSlices = std.testing.expectEqualSlices;
+// Tests
+const expectEqualSlices = std.testing.expectEqualSlices;
 
+test "jamo" {
     try expectEqualSlices(u21, braille_conv.korCharToBraille('ㄱ').?.asCodepoints(), &.{ '⠿', '⠈' });
     try expectEqualSlices(u21, braille_conv.korCharToBraille('ㄲ').?.asCodepoints(), &.{ '⠿', '⠠', '⠈' });
     try expectEqualSlices(u21, braille_conv.korCharToBraille('ㄴ').?.asCodepoints(), &.{ '⠿', '⠉' });
@@ -44,8 +45,6 @@ test "jamo" {
 }
 
 test "composite char" {
-    const expectEqualSlices = std.testing.expectEqualSlices;
-
     try expectEqualSlices(u21, braille_conv.korCharToBraille('안').?.asCodepoints(), &.{ '⠣', '⠒' });
     try expectEqualSlices(u21, braille_conv.korCharToBraille('녕').?.asCodepoints(), &.{ '⠉', '⠱', '⠶' });
     try expectEqualSlices(u21, braille_conv.korCharToBraille('낮').?.asCodepoints(), &.{ '⠉', '⠣', '⠅' });
@@ -74,16 +73,13 @@ fn readCodepoint(reader: std.io.AnyReader) !u21 {
 test "word abbrev" {
     const TestCodepointIterator = CodepointIterator(std.io.AnyReader, std.io.AnyReader.Error);
 
-    var buffer: [16]u8 align(@alignOf(u32)) = undefined;
-    const buffer_ptr: [*]u32 = @ptrCast(&buffer);
-
-    var fbs = std.io.fixedBufferStream(&buffer);
-    const reader = fbs.reader();
+    var fbs = std.io.fixedBufferStream(&[_]u8{});
+    const fbs_reader = fbs.reader();
 
     var input_buf: [4]u21 = undefined;
     var input_peek_buf: [4]u21 = undefined;
     var input_iter = TestCodepointIterator.init(
-        reader.any(),
+        fbs_reader.any(),
         &readCodepoint,
         &input_buf,
         &input_peek_buf,
@@ -108,12 +104,9 @@ test "word abbrev" {
         &.{ '⠁', '⠱' }, // 그리하여
     };
 
-    const expectEqualSlices = std.testing.expectEqualSlices;
-
     for (inputs, outputs) |input, output| {
+        fbs.buffer = std.mem.sliceAsBytes(input);
         fbs.reset();
-        input_iter.reset();
-        @memcpy(buffer_ptr, input);
         try expectEqualSlices(u21, (try braille_conv.korWordToBraille(&input_iter, &.{})).?.asCodepoints(), output);
     }
 }
@@ -121,16 +114,13 @@ test "word abbrev" {
 test "sentence" {
     // const TestCodepointIterator = CodepointIterator(std.io.AnyReader, std.io.AnyReader.Error);
     //
-    // var buffer: [16]u8 align(@alignOf(u32)) = undefined;
-    // const buffer_ptr: [*]u32 = @ptrCast(&buffer);
-    //
-    // var fbs = std.io.fixedBufferStream(&buffer);
-    // const reader = fbs.reader();
+    // var fbs = std.io.fixedBufferStream(&[_]u8{});
+    // const fbs_reader = fbs.reader();
     //
     // var input_buf: [4]u21 = undefined;
     // var input_peek_buf: [4]u21 = undefined;
     // var input_iter = TestCodepointIterator.init(
-    //     reader.any(),
+    //     fbs_reader.any(),
     //     &readCodepoint,
     //     &input_buf,
     //     &input_peek_buf,
@@ -144,9 +134,8 @@ test "sentence" {
     // };
     //
     // for (inputs, outputs) |input, output| {
+    //     fbs.buffer = std.mem.sliceAsBytes(input);
     //     fbs.reset();
-    //     input_iter.reset();
-    //     @memcpy(buffer_ptr, input);
     //     // TODO
     // }
 }
