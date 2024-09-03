@@ -11,8 +11,8 @@ pub fn CodepointIterator(Context: type, ReadError: type) type {
 
         /// Create a new CodepointIterator.
         /// Size of `buffer` and `peek_buffer` must be same.
-        /// `buffer` is used for `ring_buffer`.
-        /// `peek_buffer` is used for `fn peekUntilDelimiter`.
+        /// - `buffer` is used for `ring_buffer`.
+        /// - `peek_buffer` is used for `fn peekUntilDelimiter`.
         pub fn init(
             context: Context,
             readFn: *const fn (context: Context) ReadError!u21,
