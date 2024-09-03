@@ -301,45 +301,91 @@ pub fn korWordToBraille(codepoint_iter: anytype, delimiter: []const u21) !?KorBr
     } else null;
 }
 
-/// Converts input codepoints to braille and writes it to the writer.
-/// It writes until it encounters a delimiter. (exclusive)
-/// Size of codepoint_iter's `buffer` and `peek_buffer` must be at least 4.
-pub fn writeUntilDelimiter(writer: std.io.AnyWriter, codepoint_iter: anytype, delimiter: []const u21) !void {
-    std.debug.assert(codepoint_iter.ring_buffer.buffer.len >= 4);
-    std.debug.assert(codepoint_iter.peek_buffer.len >= 4);
+pub const BrailConverter = struct {
+    is_prev_kor: bool = false,
 
-    var is_prev_kor = false;
+    pub fn reset(self: *@This()) void {
+        self.is_prev_kor = false;
+    }
 
-    while (true) {
+    /// Converts input codepoints to braille and returns it.
+    /// Converts until it encounters a delimiter. (exclusive)
+    /// Size of codepoint_iter's `buffer` and `peek_buffer` must be at least 4.
+    pub fn convertUntilDelimiter(self: *@This(), codepoint_iter: anytype, delimiter: []const u21) !?KorBrailleCluster {
+        std.debug.assert(codepoint_iter.ring_buffer.buffer.len >= 4);
+        std.debug.assert(codepoint_iter.peek_buffer.len >= 4);
+
         // read codepoint
         const codepoint = codepoint_iter.peek() catch |err| {
             switch (err) {
-                error.EndOfStream => break,
+                error.EndOfStream => return null,
                 else => return err,
             }
         };
 
         // check delimiter
         if (std.mem.indexOfScalar(u21, delimiter, codepoint)) |_| {
-            break;
+            return null;
         }
 
         // convert word
-        defer is_prev_kor = kor_utils.isCharacter(codepoint);
-        if (!is_prev_kor) {
+        defer self.is_prev_kor = kor_utils.isCharacter(codepoint);
+        if (!self.is_prev_kor) {
             if (try korWordToBraille(codepoint_iter, delimiter)) |braille| {
-                try writer.print("{s}", .{braille});
-                continue;
+                return braille;
             }
         }
 
+        try codepoint_iter.skip(1);
+
         // convert character
         if (korCharToBraille(codepoint)) |braille| {
-            try writer.print("{s}", .{braille});
+            return braille;
         } else {
-            try writer.print("{u}", .{codepoint});
+            return error.ConversionFailed;
         }
-
-        try codepoint_iter.skip(1);
     }
-}
+
+    /// Converts input codepoints to braille and writes it to the writer.
+    /// Writes until it encounters a delimiter. (exclusive)
+    /// Size of codepoint_iter's `buffer` and `peek_buffer` must be at least 4.
+    pub fn writeUntilDelimiter(self: *@This(), writer: std.io.AnyWriter, codepoint_iter: anytype, delimiter: []const u21) !void {
+        std.debug.assert(codepoint_iter.ring_buffer.buffer.len >= 4);
+        std.debug.assert(codepoint_iter.peek_buffer.len >= 4);
+
+        self.reset();
+
+        while (true) {
+            // read codepoint
+            const codepoint = codepoint_iter.peek() catch |err| {
+                switch (err) {
+                    error.EndOfStream => break,
+                    else => return err,
+                }
+            };
+
+            // check delimiter
+            if (std.mem.indexOfScalar(u21, delimiter, codepoint)) |_| {
+                break;
+            }
+
+            // convert word
+            defer self.is_prev_kor = kor_utils.isCharacter(codepoint);
+            if (!self.is_prev_kor) {
+                if (try korWordToBraille(codepoint_iter, delimiter)) |braille| {
+                    try writer.print("{s}", .{braille});
+                    continue;
+                }
+            }
+
+            try codepoint_iter.skip(1);
+
+            // convert character
+            if (korCharToBraille(codepoint)) |braille| {
+                try writer.print("{s}", .{braille});
+            } else {
+                try writer.print("{u}", .{codepoint});
+            }
+        }
+    }
+};

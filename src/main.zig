@@ -17,8 +17,9 @@ pub fn main() !void {
         &input_peek_buf,
     );
 
+    var converter = braille_conv.BrailConverter{};
     var buf = std.io.bufferedWriter(std.io.getStdOut().writer());
-    try braille_conv.writeUntilDelimiter(buf.writer().any(), &stdin_iter, &.{'\n'});
+    try converter.writeUntilDelimiter(buf.writer().any(), &stdin_iter, &.{'\n'});
     try buf.flush();
 
     try cli.console.print("\n", .{});
@@ -26,6 +27,13 @@ pub fn main() !void {
 
 // Tests
 const expectEqualSlices = std.testing.expectEqualSlices;
+const expect = std.testing.expect;
+const TestCodepointIterator = CodepointIterator(std.io.AnyReader, std.io.AnyReader.Error);
+
+fn readCodepoint(reader: std.io.AnyReader) !u21 {
+    const builtin = @import("builtin");
+    return @truncate(try reader.readInt(u32, builtin.cpu.arch.endian()));
+}
 
 test "jamo" {
     try expectEqualSlices(u21, braille_conv.korCharToBraille('ㄱ').?.asCodepoints(), &.{ '⠿', '⠈' });
@@ -65,14 +73,7 @@ test "char abbrev" {
     // 성 썽 정 쩡 청
 }
 
-fn readCodepoint(reader: std.io.AnyReader) !u21 {
-    const builtin = @import("builtin");
-    return @truncate(try reader.readInt(u32, builtin.cpu.arch.endian()));
-}
-
 test "word abbrev" {
-    const TestCodepointIterator = CodepointIterator(std.io.AnyReader, std.io.AnyReader.Error);
-
     var fbs = std.io.fixedBufferStream(&[_]u8{});
     const fbs_reader = fbs.reader();
 
@@ -112,30 +113,41 @@ test "word abbrev" {
 }
 
 test "sentence" {
-    // const TestCodepointIterator = CodepointIterator(std.io.AnyReader, std.io.AnyReader.Error);
-    //
-    // var fbs = std.io.fixedBufferStream(&[_]u8{});
-    // const fbs_reader = fbs.reader();
-    //
-    // var input_buf: [4]u21 = undefined;
-    // var input_peek_buf: [4]u21 = undefined;
-    // var input_iter = TestCodepointIterator.init(
-    //     fbs_reader.any(),
-    //     &readCodepoint,
-    //     &input_buf,
-    //     &input_peek_buf,
-    // );
-    //
-    // const inputs = [_][]const u32{
-    //     &.{ '안', '녕', '하', '세', '요' },
-    // };
-    // const outputs = [_][]const u21{
-    //     &.{ '⠣', '⠒', '⠉', '⠻', '⠚', '⠠', '⠝', '⠬' }, // 안녕하세요
-    // };
-    //
-    // for (inputs, outputs) |input, output| {
-    //     fbs.buffer = std.mem.sliceAsBytes(input);
-    //     fbs.reset();
-    //     // TODO
-    // }
+    var fbs = std.io.fixedBufferStream(&[_]u8{});
+    const fbs_reader = fbs.reader();
+
+    var input_buf: [4]u21 = undefined;
+    var input_peek_buf: [4]u21 = undefined;
+    var input_iter = TestCodepointIterator.init(
+        fbs_reader.any(),
+        &readCodepoint,
+        &input_buf,
+        &input_peek_buf,
+    );
+
+    const inputs = [_][]const u32{
+        &.{ '안', '녕', '하', '세', '요' },
+        &.{ '감', '사', '합', '니', '다' },
+    };
+    const outputs = [_][]const u21{
+        &.{ '⠣', '⠒', '⠉', '⠱', '⠶', '⠚', '⠣', '⠠', '⠝', '⠬' }, // 안녕하세요
+        &.{ '⠈', '⠣', '⠢', '⠠', '⠣', '⠚', '⠣', '⠃', '⠉', '⠕', '⠊', '⠣' }, // 감사합니다
+    };
+
+    var converter = braille_conv.BrailConverter{};
+
+    for (inputs, outputs) |input, output| {
+        fbs.buffer = std.mem.sliceAsBytes(input);
+        fbs.reset();
+
+        converter.reset();
+        var i: usize = 0;
+        while (try converter.convertUntilDelimiter(&input_iter, &.{})) |braille| {
+            // std.debug.print("{s}\n", .{braille});
+            const codepoints = braille.asCodepoints();
+            try expectEqualSlices(u21, output[i .. i + codepoints.len], codepoints);
+            i += codepoints.len;
+        }
+        try expect(i == output.len);
+    }
 }
