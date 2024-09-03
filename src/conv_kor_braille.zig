@@ -292,7 +292,6 @@ pub fn korWordToBraille(codepoint_iter: anytype, delimiter: []const u21) !?KorBr
     return while (i < words.kor.len) : (i += 1) {
         if (std.mem.startsWith(u21, slice[1..], words.kor[i])) {
             try codepoint_iter.skip(words.kor[i].len + 1);
-            // return abbrev
             break .{ .abbrev = .{
                 .buf = .{ '⠁', words.braille[i] },
                 .len = 2,
@@ -308,13 +307,20 @@ pub const BrailleConverter = struct {
         self.is_prev_kor = false;
     }
 
+    inline fn typeConstraintCodepointIter(codepoint_iter: anytype) void {
+        comptime {
+            if (@typeInfo(@TypeOf(codepoint_iter)) != .pointer) {
+                @compileError("codepoint_iter must be a pointer to CodepointIterator");
+            }
+        }
+    }
+
     /// Convert input codepoints to braille.
     /// Convert until it encounters a delimiter. (exclusive)
     /// Size of codepoint_iter's `buffer` and `peek_buffer` must be at least 4.
     pub fn convertUntilDelimiter(self: *@This(), codepoint_iter: anytype, delimiter: []const u21) !?KorBrailleCluster {
-        if (@typeInfo(@TypeOf(codepoint_iter)) != .pointer) {
-            @compileError("codepoint_iter must be a pointer to CodepointIterator");
-        }
+        typeConstraintCodepointIter(codepoint_iter);
+
         std.debug.assert(codepoint_iter.ring_buffer.buffer.len >= 4);
         std.debug.assert(codepoint_iter.peek_buffer.len >= 4);
 
@@ -353,9 +359,8 @@ pub const BrailleConverter = struct {
     /// Print until it encounters a delimiter. (exclusive)
     /// Size of codepoint_iter's `buffer` and `peek_buffer` must be at least 4.
     pub fn printUntilDelimiter(self: *@This(), writer: std.io.AnyWriter, codepoint_iter: anytype, delimiter: []const u21) !void {
-        if (@typeInfo(@TypeOf(codepoint_iter)) != .pointer) {
-            @compileError("codepoint_iter must be a pointer to CodepointIterator");
-        }
+        typeConstraintCodepointIter(codepoint_iter);
+
         std.debug.assert(codepoint_iter.ring_buffer.buffer.len >= 4);
         std.debug.assert(codepoint_iter.peek_buffer.len >= 4);
 

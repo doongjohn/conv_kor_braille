@@ -77,7 +77,7 @@ test "word abbrev" {
     var input_peek_buf: [4]u21 = undefined;
     var input_iter = AnyCodepointIterator.init(fbs_reader.any(), &readCodepoint, &input_buf, &input_peek_buf);
 
-    const inputs = [_][]const u32{
+    const inputs = [_][]const u21{
         &.{ '그', '래', '서' },
         &.{ '그', '러', '나' },
         &.{ '그', '러', '면' },
