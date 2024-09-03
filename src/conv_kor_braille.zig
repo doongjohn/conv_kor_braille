@@ -301,7 +301,7 @@ pub fn korWordToBraille(codepoint_iter: anytype, delimiter: []const u21) !?KorBr
     } else null;
 }
 
-pub const BrailConverter = struct {
+pub const BrailleConverter = struct {
     is_prev_kor: bool = false,
 
     pub fn reset(self: *@This()) void {

@@ -1,34 +1,30 @@
 const std = @import("std");
 const cli = @import("cli.zig");
-const braille_conv = @import("braille_conv.zig");
+const console = cli.console;
+const ckb = @import("conv_kor_braille.zig");
 
 const CodepointIterator = @import("codepoint_iter.zig").CodepointIterator;
-const StdInCodepointIterator = CodepointIterator(cli.console, cli.ConsoleReadError);
+const StdInCodepointIterator = CodepointIterator(console, cli.ConsoleReadError);
 
 pub fn main() !void {
-    cli.console.init();
+    console.init();
 
     var input_buf: [4]u21 = undefined;
     var input_peek_buf: [4]u21 = undefined;
-    var stdin_iter = StdInCodepointIterator.init(
-        undefined,
-        &cli.console.methods.readCodepoint,
-        &input_buf,
-        &input_peek_buf,
-    );
+    var stdin_iter = StdInCodepointIterator.init(.{}, &console.methods.readCodepoint, &input_buf, &input_peek_buf);
 
-    var converter = braille_conv.BrailConverter{};
+    var converter = ckb.BrailleConverter{};
     var buf = std.io.bufferedWriter(std.io.getStdOut().writer());
     try converter.writeUntilDelimiter(buf.writer().any(), &stdin_iter, &.{'\n'});
     try buf.flush();
 
-    try cli.console.print("\n", .{});
+    try console.print("\n", .{});
 }
 
 // Tests
 const expectEqualSlices = std.testing.expectEqualSlices;
 const expect = std.testing.expect;
-const TestCodepointIterator = CodepointIterator(std.io.AnyReader, std.io.AnyReader.Error);
+const AnyCodepointIterator = CodepointIterator(std.io.AnyReader, std.io.AnyReader.Error);
 
 fn readCodepoint(reader: std.io.AnyReader) !u21 {
     const builtin = @import("builtin");
@@ -36,31 +32,31 @@ fn readCodepoint(reader: std.io.AnyReader) !u21 {
 }
 
 test "jamo" {
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('ㄱ').?.asCodepoints(), &.{ '⠿', '⠈' });
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('ㄲ').?.asCodepoints(), &.{ '⠿', '⠠', '⠈' });
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('ㄴ').?.asCodepoints(), &.{ '⠿', '⠉' });
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('ㄷ').?.asCodepoints(), &.{ '⠿', '⠊' });
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('ㄹ').?.asCodepoints(), &.{ '⠿', '⠐' });
+    try expectEqualSlices(u21, ckb.korCharToBraille('ㄱ').?.asCodepoints(), &.{ '⠿', '⠈' });
+    try expectEqualSlices(u21, ckb.korCharToBraille('ㄲ').?.asCodepoints(), &.{ '⠿', '⠠', '⠈' });
+    try expectEqualSlices(u21, ckb.korCharToBraille('ㄴ').?.asCodepoints(), &.{ '⠿', '⠉' });
+    try expectEqualSlices(u21, ckb.korCharToBraille('ㄷ').?.asCodepoints(), &.{ '⠿', '⠊' });
+    try expectEqualSlices(u21, ckb.korCharToBraille('ㄹ').?.asCodepoints(), &.{ '⠿', '⠐' });
 
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('ㅏ').?.asCodepoints(), &.{ '⠿', '⠣' });
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('ㅐ').?.asCodepoints(), &.{ '⠿', '⠗' });
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('ㅒ').?.asCodepoints(), &.{ '⠿', '⠜', '⠗' });
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('ㅚ').?.asCodepoints(), &.{ '⠿', '⠽' });
+    try expectEqualSlices(u21, ckb.korCharToBraille('ㅏ').?.asCodepoints(), &.{ '⠿', '⠣' });
+    try expectEqualSlices(u21, ckb.korCharToBraille('ㅐ').?.asCodepoints(), &.{ '⠿', '⠗' });
+    try expectEqualSlices(u21, ckb.korCharToBraille('ㅒ').?.asCodepoints(), &.{ '⠿', '⠜', '⠗' });
+    try expectEqualSlices(u21, ckb.korCharToBraille('ㅚ').?.asCodepoints(), &.{ '⠿', '⠽' });
 
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('ㄳ').?.asCodepoints(), &.{ '⠿', '⠁', '⠄' });
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('ㄵ').?.asCodepoints(), &.{ '⠿', '⠒', '⠅' });
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('ㄺ').?.asCodepoints(), &.{ '⠿', '⠂', '⠁' });
+    try expectEqualSlices(u21, ckb.korCharToBraille('ㄳ').?.asCodepoints(), &.{ '⠿', '⠁', '⠄' });
+    try expectEqualSlices(u21, ckb.korCharToBraille('ㄵ').?.asCodepoints(), &.{ '⠿', '⠒', '⠅' });
+    try expectEqualSlices(u21, ckb.korCharToBraille('ㄺ').?.asCodepoints(), &.{ '⠿', '⠂', '⠁' });
 }
 
 test "composite char" {
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('안').?.asCodepoints(), &.{ '⠣', '⠒' });
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('녕').?.asCodepoints(), &.{ '⠉', '⠱', '⠶' });
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('낮').?.asCodepoints(), &.{ '⠉', '⠣', '⠅' });
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('밤').?.asCodepoints(), &.{ '⠘', '⠣', '⠢' });
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('았').?.asCodepoints(), &.{ '⠣', '⠌' });
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('너').?.asCodepoints(), &.{ '⠉', '⠎' });
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('앉').?.asCodepoints(), &.{ '⠣', '⠒', '⠅' });
-    try expectEqualSlices(u21, braille_conv.korCharToBraille('닭').?.asCodepoints(), &.{ '⠊', '⠣', '⠂', '⠁' });
+    try expectEqualSlices(u21, ckb.korCharToBraille('안').?.asCodepoints(), &.{ '⠣', '⠒' });
+    try expectEqualSlices(u21, ckb.korCharToBraille('녕').?.asCodepoints(), &.{ '⠉', '⠱', '⠶' });
+    try expectEqualSlices(u21, ckb.korCharToBraille('낮').?.asCodepoints(), &.{ '⠉', '⠣', '⠅' });
+    try expectEqualSlices(u21, ckb.korCharToBraille('밤').?.asCodepoints(), &.{ '⠘', '⠣', '⠢' });
+    try expectEqualSlices(u21, ckb.korCharToBraille('았').?.asCodepoints(), &.{ '⠣', '⠌' });
+    try expectEqualSlices(u21, ckb.korCharToBraille('너').?.asCodepoints(), &.{ '⠉', '⠎' });
+    try expectEqualSlices(u21, ckb.korCharToBraille('앉').?.asCodepoints(), &.{ '⠣', '⠒', '⠅' });
+    try expectEqualSlices(u21, ckb.korCharToBraille('닭').?.asCodepoints(), &.{ '⠊', '⠣', '⠂', '⠁' });
 }
 
 test "char abbrev" {
@@ -79,12 +75,7 @@ test "word abbrev" {
 
     var input_buf: [4]u21 = undefined;
     var input_peek_buf: [4]u21 = undefined;
-    var input_iter = TestCodepointIterator.init(
-        fbs_reader.any(),
-        &readCodepoint,
-        &input_buf,
-        &input_peek_buf,
-    );
+    var input_iter = AnyCodepointIterator.init(fbs_reader.any(), &readCodepoint, &input_buf, &input_peek_buf);
 
     const inputs = [_][]const u32{
         &.{ '그', '래', '서' },
@@ -108,7 +99,7 @@ test "word abbrev" {
     for (inputs, outputs) |input, output| {
         fbs.buffer = std.mem.sliceAsBytes(input);
         fbs.reset();
-        try expectEqualSlices(u21, (try braille_conv.korWordToBraille(&input_iter, &.{})).?.asCodepoints(), output);
+        try expectEqualSlices(u21, (try ckb.korWordToBraille(&input_iter, &.{})).?.asCodepoints(), output);
     }
 }
 
@@ -118,12 +109,7 @@ test "sentence" {
 
     var input_buf: [4]u21 = undefined;
     var input_peek_buf: [4]u21 = undefined;
-    var input_iter = TestCodepointIterator.init(
-        fbs_reader.any(),
-        &readCodepoint,
-        &input_buf,
-        &input_peek_buf,
-    );
+    var input_iter = AnyCodepointIterator.init(fbs_reader.any(), &readCodepoint, &input_buf, &input_peek_buf);
 
     const inputs = [_][]const u32{
         &.{ '안', '녕', '하', '세', '요' },
@@ -134,7 +120,7 @@ test "sentence" {
         &.{ '⠈', '⠣', '⠢', '⠠', '⠣', '⠚', '⠣', '⠃', '⠉', '⠕', '⠊', '⠣' }, // 감사합니다
     };
 
-    var converter = braille_conv.BrailConverter{};
+    var converter = ckb.BrailleConverter{};
 
     for (inputs, outputs) |input, output| {
         fbs.buffer = std.mem.sliceAsBytes(input);
@@ -143,10 +129,11 @@ test "sentence" {
         converter.reset();
         var i: usize = 0;
         while (try converter.convertUntilDelimiter(&input_iter, &.{})) |braille| {
-            // std.debug.print("{s}\n", .{braille});
             const codepoints = braille.asCodepoints();
+            defer i += codepoints.len;
+
+            // std.debug.print("{s}\n", .{braille});
             try expectEqualSlices(u21, output[i .. i + codepoints.len], codepoints);
-            i += codepoints.len;
         }
         try expect(i == output.len);
     }
