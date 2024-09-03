@@ -15,7 +15,7 @@ pub fn main() !void {
 
     var converter = ckb.BrailleConverter{};
     var buf = std.io.bufferedWriter(std.io.getStdOut().writer());
-    try converter.writeUntilDelimiter(buf.writer().any(), &stdin_iter, &.{'\n'});
+    try converter.printUntilDelimiter(buf.writer().any(), &stdin_iter, &.{'\n'});
     try buf.flush();
 
     try console.print("\n", .{});

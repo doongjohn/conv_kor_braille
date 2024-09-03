@@ -346,10 +346,10 @@ pub const BrailleConverter = struct {
         }
     }
 
-    /// Converts input codepoints to braille and writes it to the writer.
-    /// Writes until it encounters a delimiter. (exclusive)
+    /// Converts input codepoints to braille and prints it to the writer.
+    /// Prints until it encounters a delimiter. (exclusive)
     /// Size of codepoint_iter's `buffer` and `peek_buffer` must be at least 4.
-    pub fn writeUntilDelimiter(self: *@This(), writer: std.io.AnyWriter, codepoint_iter: anytype, delimiter: []const u21) !void {
+    pub fn printUntilDelimiter(self: *@This(), writer: std.io.AnyWriter, codepoint_iter: anytype, delimiter: []const u21) !void {
         std.debug.assert(codepoint_iter.ring_buffer.buffer.len >= 4);
         std.debug.assert(codepoint_iter.peek_buffer.len >= 4);
 
@@ -364,27 +364,22 @@ pub const BrailleConverter = struct {
                 }
             };
 
-            // check delimiter
-            if (std.mem.indexOfScalar(u21, delimiter, codepoint)) |_| {
-                break;
-            }
-
-            // convert word
-            defer self.is_prev_kor = kor_utils.isCharacter(codepoint);
-            if (!self.is_prev_kor) {
-                if (try korWordToBraille(codepoint_iter, delimiter)) |braille| {
-                    try writer.print("{s}", .{braille});
-                    continue;
+            // convert to braille
+            const conv_result = self.convertUntilDelimiter(codepoint_iter, delimiter) catch |err| {
+                switch (err) {
+                    error.ConversionFailed => {
+                        try writer.print("{u}", .{codepoint});
+                        continue;
+                    },
+                    else => return err,
                 }
-            }
+            };
 
-            try codepoint_iter.skip(1);
-
-            // convert character
-            if (korCharToBraille(codepoint)) |braille| {
+            // print braille
+            if (conv_result) |braille| {
                 try writer.print("{s}", .{braille});
             } else {
-                try writer.print("{u}", .{codepoint});
+                break;
             }
         }
     }
