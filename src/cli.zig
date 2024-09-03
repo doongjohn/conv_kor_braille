@@ -10,7 +10,7 @@ pub const ConsoleReadError = error{
     Utf16InvalidStartCodeUnit,
     ExpectedSecondSurrogateHalf,
     EndOfStream,
-} || std.posix.ReadError;
+} || std.fs.File.ReadError;
 
 const console_impl_windows = struct {
     var stdin_handle = std.os.windows.INVALID_HANDLE_VALUE;
@@ -99,23 +99,21 @@ pub const console = struct {
         return try readUntilDelimiter(buffer, &.{ '\r', '\n' });
     }
 
-    const Self = @This();
-
     pub const methods = struct {
-        pub fn print(_: Self, comptime format: []const u8, args: anytype) !void {
-            try Self.print(format, args);
+        pub fn print(_: console, comptime format: []const u8, args: anytype) !void {
+            try console.print(format, args);
         }
 
-        pub fn readCodepoint(_: Self) ConsoleReadError!u21 {
-            return try Self.readCodepoint();
+        pub fn readCodepoint(_: console) ConsoleReadError!u21 {
+            return try console.readCodepoint();
         }
 
-        pub fn readUntilDelimiter(_: Self, buffer: []u21, delimiter: []const u21) ConsoleReadError![]const u21 {
-            return try Self.readUntilDelimiter(buffer, delimiter);
+        pub fn readUntilDelimiter(_: console, buffer: []u21, delimiter: []const u21) ConsoleReadError![]const u21 {
+            return try console.readUntilDelimiter(buffer, delimiter);
         }
 
-        pub fn readLine(_: Self, buffer: []u21) ConsoleReadError![]const u21 {
-            return try Self.readLine(buffer);
+        pub fn readLine(_: console, buffer: []u21) ConsoleReadError![]const u21 {
+            return try console.readLine(buffer);
         }
     };
 };
