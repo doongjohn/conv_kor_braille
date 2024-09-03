@@ -308,8 +308,8 @@ pub const BrailleConverter = struct {
         self.is_prev_kor = false;
     }
 
-    /// Converts input codepoints to braille and returns it.
-    /// Converts until it encounters a delimiter. (exclusive)
+    /// Convert input codepoints to braille.
+    /// Convert until it encounters a delimiter. (exclusive)
     /// Size of codepoint_iter's `buffer` and `peek_buffer` must be at least 4.
     pub fn convertUntilDelimiter(self: *@This(), codepoint_iter: anytype, delimiter: []const u21) !?KorBrailleCluster {
         if (@typeInfo(@TypeOf(codepoint_iter)) != .pointer) {
@@ -349,8 +349,8 @@ pub const BrailleConverter = struct {
         }
     }
 
-    /// Converts input codepoints to braille and prints it to the writer.
-    /// Prints until it encounters a delimiter. (exclusive)
+    /// Convert input codepoints to braille and print it to the writer.
+    /// Print until it encounters a delimiter. (exclusive)
     /// Size of codepoint_iter's `buffer` and `peek_buffer` must be at least 4.
     pub fn printUntilDelimiter(self: *@This(), writer: std.io.AnyWriter, codepoint_iter: anytype, delimiter: []const u21) !void {
         if (@typeInfo(@TypeOf(codepoint_iter)) != .pointer) {
