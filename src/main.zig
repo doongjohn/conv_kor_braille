@@ -11,7 +11,7 @@ pub fn main() !void {
 
     var input_buf: [4]u21 = undefined;
     var input_peek_buf: [4]u21 = undefined;
-    var stdin_iter = StdInCodepointIterator.init(.{}, &console.methods.readCodepoint, &input_buf, &input_peek_buf);
+    var stdin_iter = StdInCodepointIterator.init(undefined, &console.methods.readCodepoint, &input_buf, &input_peek_buf);
 
     var converter = ckb.BrailleConverter{};
     var buf = std.io.bufferedWriter(std.io.getStdOut().writer());
