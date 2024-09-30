@@ -1,18 +1,5 @@
 const std = @import("std");
-
-const kor_utils = struct {
-    pub fn isJamo(codepoint: u21) bool {
-        return codepoint >= 'ㄱ' and codepoint <= 'ㅣ';
-    }
-
-    pub fn isComposite(codepoint: u21) bool {
-        return codepoint >= '가' and codepoint <= '힣';
-    }
-
-    pub fn isCharacter(codepoint: u21) bool {
-        return isJamo(codepoint) or isComposite(codepoint);
-    }
-};
+const kor_utils = @import("kor_utils.zig");
 
 const kor_char_table = struct {
     const cho = [_]u21{ 'ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ' };
@@ -307,11 +294,9 @@ pub const BrailleConverter = struct {
         self.is_prev_kor = false;
     }
 
-    inline fn typeConstraintCodepointIter(codepoint_iter: anytype) void {
-        comptime {
-            if (@typeInfo(@TypeOf(codepoint_iter)) != .pointer) {
-                @compileError("codepoint_iter must be a pointer to CodepointIterator");
-            }
+    inline fn typeCheckCodepointIter(codepoint_iter: anytype) void {
+        if (@typeInfo(@TypeOf(codepoint_iter)) != .pointer) {
+            @compileError("codepoint_iter must be a pointer to CodepointIterator");
         }
     }
 
@@ -319,9 +304,8 @@ pub const BrailleConverter = struct {
     /// Convert until it encounters a delimiter. (exclusive)
     /// Size of codepoint_iter's `buffer` and `peek_buffer` must be at least 4.
     pub fn convertUntilDelimiter(self: *@This(), codepoint_iter: anytype, delimiter: []const u21) !?KorBrailleCluster {
-        typeConstraintCodepointIter(codepoint_iter);
-
-        std.debug.assert(codepoint_iter.ring_buffer.buffer.len >= 4);
+        typeCheckCodepointIter(codepoint_iter);
+        std.debug.assert(codepoint_iter.ring_buffer.buf.len >= 4);
         std.debug.assert(codepoint_iter.peek_buffer.len >= 4);
 
         // read codepoint
@@ -359,9 +343,8 @@ pub const BrailleConverter = struct {
     /// Print until it encounters a delimiter. (exclusive)
     /// Size of codepoint_iter's `buffer` and `peek_buffer` must be at least 4.
     pub fn printUntilDelimiter(self: *@This(), writer: std.io.AnyWriter, codepoint_iter: anytype, delimiter: []const u21) !void {
-        typeConstraintCodepointIter(codepoint_iter);
-
-        std.debug.assert(codepoint_iter.ring_buffer.buffer.len >= 4);
+        typeCheckCodepointIter(codepoint_iter);
+        std.debug.assert(codepoint_iter.ring_buffer.buf.len >= 4);
         std.debug.assert(codepoint_iter.peek_buffer.len >= 4);
 
         self.reset();

@@ -24,7 +24,7 @@ pub fn CodepointIterator(Context: type, ReadError: type) type {
             return .{
                 .context = context,
                 .readFn = readFn,
-                .ring_buffer = GenericRingBuffer(u21){ .buffer = buffer },
+                .ring_buffer = GenericRingBuffer(u21){ .buf = buffer },
                 .peek_buffer = peek_buffer,
             };
         }
@@ -48,7 +48,7 @@ pub fn CodepointIterator(Context: type, ReadError: type) type {
         /// Peek `n` items and return it as a slice.
         /// Returned slice is valid until `fn next` or `fn skip` is called.
         pub fn peekUntilDelimiter(self: *@This(), n: usize, delimiter: []const u21) ![]const u21 {
-            if (n == 0 or self.ring_buffer.buffer.len < n) {
+            if (n == 0 or self.ring_buffer.buf.len < n) {
                 return &.{};
             }
 
@@ -82,12 +82,12 @@ pub fn CodepointIterator(Context: type, ReadError: type) type {
 
             // Return as slice
             if (self.ring_buffer.head <= self.ring_buffer.tail) {
-                return self.ring_buffer.buffer[self.ring_buffer.head .. self.ring_buffer.tail + 1];
+                return self.ring_buffer.buf[self.ring_buffer.head .. self.ring_buffer.tail + 1];
             } else {
-                const front_seg_size = self.ring_buffer.buffer.len - self.ring_buffer.head;
+                const front_seg_size = self.ring_buffer.buf.len - self.ring_buffer.head;
 
-                const ring_front_seg = self.ring_buffer.buffer[self.ring_buffer.head .. self.ring_buffer.head + front_seg_size];
-                const ring_back_seg = self.ring_buffer.buffer[0 .. self.ring_buffer.tail + 1];
+                const ring_front_seg = self.ring_buffer.buf[self.ring_buffer.head .. self.ring_buffer.head + front_seg_size];
+                const ring_back_seg = self.ring_buffer.buf[0 .. self.ring_buffer.tail + 1];
 
                 const peek_front_seg = self.peek_buffer[0..front_seg_size];
                 const peek_back_seg = self.peek_buffer[front_seg_size..self.ring_buffer.size];
