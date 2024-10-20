@@ -19,6 +19,7 @@ pub fn CodepointIterator(Context: type, ReadError: type) type {
             buffer: []u21,
             peek_buffer: []u21,
         ) @This() {
+            // check parameters
             std.debug.assert(buffer.len == peek_buffer.len);
 
             return .{
@@ -29,11 +30,24 @@ pub fn CodepointIterator(Context: type, ReadError: type) type {
             };
         }
 
+        /// Reset internal state.
+        /// Peeked data will be discarded.
+        pub fn reset(self: *@This()) void {
+            self.ring_buffer.clear();
+        }
+
         pub fn next(self: *@This()) !u21 {
             if (self.ring_buffer.size == 0) {
                 return try self.readFn(self.context);
             } else {
                 return try self.ring_buffer.popFront();
+            }
+        }
+
+        /// Discard `n` items.
+        pub fn skip(self: *@This(), n: usize) !void {
+            for (0..n) |_| {
+                _ = try self.next();
             }
         }
 
@@ -96,19 +110,6 @@ pub fn CodepointIterator(Context: type, ReadError: type) type {
                 @memcpy(peek_back_seg, ring_back_seg);
                 return self.peek_buffer[0..self.ring_buffer.size];
             }
-        }
-
-        /// Discard `n` items.
-        pub fn skip(self: *@This(), n: usize) !void {
-            for (0..n) |_| {
-                _ = try self.next();
-            }
-        }
-
-        /// Reset internal state.
-        /// Peeked data will be discarded.
-        pub fn reset(self: *@This()) void {
-            self.ring_buffer.clear();
         }
     };
 }
