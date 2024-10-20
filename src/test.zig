@@ -82,7 +82,7 @@ test "word abbrev" {
         fbs.reset();
 
         var last_codepoint: u21 = undefined;
-        try expectEqualSlices(u21, (try ckb.korWordToBraille(&input_iter, &.{}, &last_codepoint)).?.asCodepoints(), output);
+        try expectEqualSlices(u21, (try ckb.korWordToBraille(&input_iter, 0, &last_codepoint)).?.asCodepoints(), output);
     }
 }
 
@@ -111,7 +111,7 @@ test "sentence" {
 
         converter.reset();
         var i: usize = 0;
-        while (try converter.convertUntilDelimiter(&input_iter, &.{})) |braille| {
+        while (try converter.convertNextBraille(&input_iter, 0)) |braille| {
             const codepoints = braille.asCodepoints();
             defer i += codepoints.len;
 

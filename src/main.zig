@@ -18,7 +18,7 @@ pub fn main() !void {
     var writer = buf_writer.writer();
 
     var converter = ckb.BrailleConverter{};
-    try converter.printUntilDelimiter(writer.any(), &stdin_iter, &.{ '\r', '\n' });
+    try converter.printUntilDelimiter(writer.any(), &stdin_iter, '\n');
 
     try writer.print("\n", .{});
     try buf_writer.flush();

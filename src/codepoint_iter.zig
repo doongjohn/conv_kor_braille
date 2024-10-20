@@ -61,7 +61,7 @@ pub fn CodepointIterator(Context: type, ReadError: type) type {
 
         /// Peek `n` items and return it as a slice.
         /// Returned slice is valid until `fn next` or `fn skip` is called.
-        pub fn peekUntilDelimiter(self: *@This(), n: usize, delimiter: []const u21) ![]const u21 {
+        pub fn peekUntilDelimiter(self: *@This(), n: usize, delimiter: u21) ![]const u21 {
             if (n == 0 or self.ring_buffer.buf.len < n) {
                 return &.{};
             }
@@ -69,7 +69,7 @@ pub fn CodepointIterator(Context: type, ReadError: type) type {
             blk: {
                 // Don't read more if the last codepoint is delimiter
                 if (self.ring_buffer.size > 0) {
-                    if (std.mem.indexOfScalar(u21, delimiter, try self.ring_buffer.getBack())) |_| {
+                    if (try self.ring_buffer.getBack() == delimiter) {
                         break :blk;
                     }
                 }
@@ -87,14 +87,14 @@ pub fn CodepointIterator(Context: type, ReadError: type) type {
                         try self.ring_buffer.pushBack(codepoint);
 
                         // check delimiter
-                        if (std.mem.indexOfScalar(u21, delimiter, codepoint)) |_| {
+                        if (codepoint == delimiter) {
                             break;
                         }
                     }
                 }
             }
 
-            // Return as slice
+            // Return as a slice
             if (self.ring_buffer.head <= self.ring_buffer.tail) {
                 return self.ring_buffer.buf[self.ring_buffer.head .. self.ring_buffer.tail + 1];
             } else {
