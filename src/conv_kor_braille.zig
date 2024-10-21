@@ -220,8 +220,7 @@ pub fn korCharToBraille(codepoint: u21) ?KorBrailleCluster {
                 var i: u8 = 0;
 
                 // choseong
-                if (composite.choseong_i != 11) {
-                    // empty if choseong is 'ㅇ'
+                if (composite.choseong_i != 11) { // ignore 'ㅇ'
                     const cho = kor_braille_table.choseongToBraille(composite.choseong_i);
                     braille.composite.choseong = braille.composite.buf[i .. i + cho.len];
                     @memcpy(braille.composite.choseong, cho);
@@ -332,18 +331,17 @@ pub const BrailleConverter = struct {
         }
 
         // update state
-        defer self.is_prev_kor = kor_utils.isCharacter(codepoint);
+        var is_kor = false;
+        defer self.is_prev_kor = is_kor;
         defer self.prev_codepoint = codepoint;
 
         // convert word
         if (!self.is_prev_kor) {
             if (try korWordToBraille(codepoint_iter, delimiter, &self.prev_codepoint)) |braille| {
+                is_kor = true;
                 return braille;
             }
         }
-
-        // consume codepoint
-        try codepoint_iter.skip(1);
 
         if (self.is_prev_kor) {
             // 모음 연쇄
@@ -353,8 +351,10 @@ pub const BrailleConverter = struct {
                     switch (kor_char_index) {
                         .composite => |composite| {
                             if (composite.jongseong_i == 0) {
-                                // TODO
-                                // return braille;
+                                return .{ .single = .{
+                                    .buf = .{ '⠤', 0, 0 },
+                                    .len = @intCast(1),
+                                } };
                             }
                         },
                         else => {},
@@ -366,9 +366,13 @@ pub const BrailleConverter = struct {
                     switch (kor_char_index) {
                         .composite => |composite| {
                             const target_jungseongs = [_]u8{ 2, 9, 13, 14 }; // ㅑ ㅘ ㅜ ㅝ
-                            if (composite.jongseong_i == 0 and std.mem.indexOfScalar(u8, &target_jungseongs, composite.jungseong_i) != null) {
-                                // TODO
-                                // return braille;
+                            if (composite.jongseong_i == 0 and
+                                std.mem.indexOfScalar(u8, &target_jungseongs, composite.jungseong_i) != null)
+                            {
+                                return .{ .single = .{
+                                    .buf = .{ '⠤', 0, 0 },
+                                    .len = @intCast(1),
+                                } };
                             }
                         },
                         else => {},
@@ -377,8 +381,12 @@ pub const BrailleConverter = struct {
             }
         }
 
+        // consume codepoint
+        try codepoint_iter.skip(1);
+
         // convert character
         if (korCharToBraille(codepoint)) |braille| {
+            is_kor = true;
             return braille;
         } else {
             return error.ConversionFailed;
