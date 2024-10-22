@@ -103,7 +103,7 @@ pub const KorBrailleCluster = union(enum) {
         }
     }
 
-    pub fn asCodepoints(self: *const @This()) []const u21 {
+    pub fn asSlice(self: *const @This()) []const u21 {
         switch (self.*) {
             .single => |*single| {
                 return single.buf[0..single.len];
