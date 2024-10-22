@@ -278,11 +278,11 @@ pub fn korWordToBraille(codepoint_iter: anytype, delimiter: u21, last_codepoint:
     return while (i < words.kor.len) : (i += 1) {
         const word = words.kor[i];
         if (std.mem.startsWith(u21, slice[1..], word)) {
-            // update last codepoint
-            last_codepoint.* = word[word.len - 1];
-
             // consume codepoints
             try codepoint_iter.skip(word.len + 1);
+
+            // update last codepoint
+            last_codepoint.* = word[word.len - 1];
 
             // return braille
             break .{ .abbrev = .{
@@ -295,11 +295,12 @@ pub fn korWordToBraille(codepoint_iter: anytype, delimiter: u21, last_codepoint:
 
 pub const BrailleConverter = struct {
     is_prev_kor: bool = false,
-    prev_codepoint: u21 = undefined,
+    prev_codepoint: u21 = 0,
 
     /// Reset BrailleConverter's state.
     pub fn reset(self: *@This()) void {
         self.is_prev_kor = false;
+        self.prev_codepoint = 0;
     }
 
     inline fn typeCheckCodepointIter(codepoint_iter: anytype) void {
@@ -318,7 +319,7 @@ pub const BrailleConverter = struct {
         std.debug.assert(codepoint_iter.peek_buffer.len >= 4);
 
         // read codepoint
-        const codepoint = codepoint_iter.peek() catch |err| {
+        var codepoint = codepoint_iter.peek() catch |err| {
             switch (err) {
                 error.EndOfStream => return null,
                 else => return err,
@@ -337,7 +338,7 @@ pub const BrailleConverter = struct {
 
         // convert word
         if (!self.is_prev_kor) {
-            if (try korWordToBraille(codepoint_iter, delimiter, &self.prev_codepoint)) |braille| {
+            if (try korWordToBraille(codepoint_iter, delimiter, &codepoint)) |braille| {
                 is_kor = true;
                 return braille;
             }
@@ -345,39 +346,43 @@ pub const BrailleConverter = struct {
 
         if (self.is_prev_kor) {
             // 모음 연쇄
-            if (codepoint == '예') {
-                // 모음자에 '예'가 붙어 나올 때에는 그 사이에 구분표 ⠤을 적어 나타낸다.
-                if (korCharToIndex(self.prev_codepoint)) |kor_char_index| {
-                    switch (kor_char_index) {
-                        .composite => |composite| {
-                            if (composite.jongseong_i == 0) {
-                                return .{ .single = .{
-                                    .buf = .{ '⠤', 0, 0 },
-                                    .len = @intCast(1),
-                                } };
-                            }
-                        },
-                        else => {},
+            switch (codepoint) {
+                '예' => {
+                    // 모음자에 '예'가 붙어 나올 때에는 그 사이에 구분표 ⠤을 적어 나타낸다.
+                    if (korCharToIndex(self.prev_codepoint)) |kor_char_index| {
+                        switch (kor_char_index) {
+                            .composite => |composite| {
+                                if (composite.jongseong_i == 0) {
+                                    return .{ .single = .{
+                                        .buf = .{ '⠤', 0, 0 },
+                                        .len = @intCast(1),
+                                    } };
+                                }
+                            },
+                            else => {},
+                        }
                     }
-                }
-            } else if (codepoint == '애') {
-                // 'ㅑ, ㅘ, ㅜ, ㅝ'에 '애'가 붙어 나올 때에는 두 모음자 사이에 구분표 ⠤을 적어 나타낸다
-                if (korCharToIndex(self.prev_codepoint)) |kor_char_index| {
-                    switch (kor_char_index) {
-                        .composite => |composite| {
-                            const target_jungseongs = [_]u8{ 2, 9, 13, 14 }; // ㅑ ㅘ ㅜ ㅝ
-                            if (composite.jongseong_i == 0 and
-                                std.mem.indexOfScalar(u8, &target_jungseongs, composite.jungseong_i) != null)
-                            {
-                                return .{ .single = .{
-                                    .buf = .{ '⠤', 0, 0 },
-                                    .len = @intCast(1),
-                                } };
-                            }
-                        },
-                        else => {},
+                },
+                '애' => {
+                    // 'ㅑ, ㅘ, ㅜ, ㅝ'에 '애'가 붙어 나올 때에는 두 모음자 사이에 구분표 ⠤을 적어 나타낸다
+                    if (korCharToIndex(self.prev_codepoint)) |kor_char_index| {
+                        switch (kor_char_index) {
+                            .composite => |composite| {
+                                const target_jungseongs = [_]u8{ 2, 9, 13, 14 }; // ㅑ ㅘ ㅜ ㅝ
+                                if (composite.jongseong_i == 0 and
+                                    std.mem.indexOfScalar(u8, &target_jungseongs, composite.jungseong_i) != null)
+                                {
+                                    return .{ .single = .{
+                                        .buf = .{ '⠤', 0, 0 },
+                                        .len = @intCast(1),
+                                    } };
+                                }
+                            },
+                            else => {},
+                        }
                     }
-                }
+                },
+                else => {},
             }
         }
 
