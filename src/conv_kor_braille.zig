@@ -364,7 +364,7 @@ pub const BrailleConverter = struct {
                     }
                 },
                 '애' => {
-                    // 'ㅑ, ㅘ, ㅜ, ㅝ'에 '애'가 붙어 나올 때에는 두 모음자 사이에 구분표 ⠤을 적어 나타낸다
+                    // 'ㅑ, ㅘ, ㅜ, ㅝ'에 '애'가 붙어 나올 때에는 두 모음자 사이에 구분표 ⠤을 적어 나타낸다.
                     if (korCharToIndex(self.prev_codepoint)) |kor_char_index| {
                         switch (kor_char_index) {
                             .composite => |composite| {
