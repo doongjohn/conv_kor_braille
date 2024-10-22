@@ -361,6 +361,8 @@ pub const BrailleConverter = struct {
                             },
                             else => {},
                         }
+                    } else {
+                        unreachable;
                     }
                 },
                 '애' => {
@@ -380,6 +382,8 @@ pub const BrailleConverter = struct {
                             },
                             else => {},
                         }
+                    } else {
+                        unreachable;
                     }
                 },
                 else => {},
