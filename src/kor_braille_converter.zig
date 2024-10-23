@@ -187,8 +187,8 @@ pub const KorBrailleConverter = struct {
         return null;
     }
 
-    /// Converts next codepoint to braille.
-    /// Returns null if EndOfStream or the current codepoint is delimiter.
+    /// Convert next codepoint to braille.
+    /// Return null if EndOfStream or the current codepoint is delimiter.
     /// codepoint_iter's `buffer.len` and `peek_buffer.len` must be at least 4.
     pub fn convertNextBraille(self: *@This(), codepoint_iter: anytype, delimiter: u21) !?KorBrailleCluster {
         // check parameters
@@ -228,7 +228,7 @@ pub const KorBrailleConverter = struct {
         }
 
         // consume codepoint
-        try codepoint_iter.skip(1);
+        codepoint_iter.skip(1) catch unreachable;
 
         // convert character
         if (korCharToBraille(codepoint)) |braille| {
@@ -239,10 +239,10 @@ pub const KorBrailleConverter = struct {
         }
     }
 
-    /// Converts input codepoints to braille and prints it to the writer.
-    /// Stops if EndOfStream or the current codepoint is delimiter.
+    /// Convert input codepoints to braille and print it to the writer.
+    /// Stop printing if EndOfStream or the current codepoint is delimiter.
     /// codepoint_iter's `buffer.len` and `peek_buffer.len` must be at least 4.
-    pub fn printBrailleUntilDelimiter(self: *@This(), writer: std.io.AnyWriter, codepoint_iter: anytype, delimiter: u21) !void {
+    pub fn printAsBrailles(self: *@This(), writer: std.io.AnyWriter, codepoint_iter: anytype, delimiter: u21) !void {
         // check parameters
         typeCheckCodepointIter(codepoint_iter);
         std.debug.assert(codepoint_iter.ring_buffer.buf.len >= 4);
