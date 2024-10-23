@@ -83,7 +83,7 @@ test "word abbrev" {
         fbs.buffer = std.mem.sliceAsBytes(input);
 
         var last_codepoint: u21 = undefined;
-        try expectEqualSlices(u21, (try kbc.korWordToBraille(&input_iter, 0, &last_codepoint)).?.asSlice(), output);
+        try expectEqualSlices(u21, (try kbc.korWordToBrailleAbbrev(&input_iter, 0, &last_codepoint)).?.asSlice(), output);
     }
 }
 

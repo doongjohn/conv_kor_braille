@@ -19,7 +19,7 @@ pub fn main() !void {
     var writer = buf_writer.writer();
 
     var converter = KorBrailleConverter{};
-    try converter.printUntilDelimiter(writer.any(), &stdin_iter, '\n');
+    try converter.printBrailleUntilDelimiter(writer.any(), &stdin_iter, '\n');
 
     try writer.print("\n", .{});
     try buf_writer.flush();

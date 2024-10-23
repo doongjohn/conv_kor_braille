@@ -10,6 +10,7 @@ const choseongToBraille = kor_braille.choseongToBraille;
 const jungseongToBraille = kor_braille.jungseongToBraille;
 const jongseongToBraille = kor_braille.jongseongToBraille;
 
+/// Convert single korean character to braille.
 pub fn korCharToBraille(codepoint: u21) ?KorBrailleCluster {
     if (korCharToIndex(codepoint)) |char_index| {
         var braille: KorBrailleCluster = undefined;
@@ -73,7 +74,8 @@ pub fn korCharToBraille(codepoint: u21) ?KorBrailleCluster {
     }
 }
 
-pub fn korWordToBraille(codepoint_iter: anytype, delimiter: u21, last_codepoint: *u21) !?KorBrailleCluster {
+/// Convert korean word to braille abbreviation.
+pub fn korWordToBrailleAbbrev(codepoint_iter: anytype, delimiter: u21, last_codepoint: *u21) !?KorBrailleCluster {
     const slice = try codepoint_iter.peekUntilDelimiter(4, delimiter);
     if (slice.len < 2 or slice[0] != '그') {
         return null;
@@ -136,43 +138,9 @@ pub const KorBrailleConverter = struct {
         }
     }
 
-    /// Convert input codepoints to a braille.
-    /// Returns null if end of stream or the next codepoint is delimiter.
-    /// `buffer.len` and `peek_buffer.len` must be at least 4.
-    pub fn convertNextBraille(self: *@This(), codepoint_iter: anytype, delimiter: u21) !?KorBrailleCluster {
-        // check parameters
-        typeCheckCodepointIter(codepoint_iter);
-        std.debug.assert(codepoint_iter.ring_buffer.buf.len >= 4);
-        std.debug.assert(codepoint_iter.peek_buffer.len >= 4);
-
-        // read codepoint
-        var codepoint = codepoint_iter.peek() catch |err| {
-            switch (err) {
-                error.EndOfStream => return null,
-                else => return err,
-            }
-        };
-
-        // check delimiter
-        if (codepoint == delimiter) {
-            return null;
-        }
-
-        // update state
-        var is_kor = false;
-        defer self.is_prev_kor = is_kor;
-        defer self.prev_codepoint = codepoint;
-
-        // convert word
-        if (!self.is_prev_kor) {
-            if (try korWordToBraille(codepoint_iter, delimiter, &codepoint)) |braille| {
-                is_kor = true;
-                return braille;
-            }
-        }
-
+    /// 모음 연쇄
+    fn consecutiveMoeum(self: *@This(), codepoint: u21) ?KorBrailleCluster {
         if (self.is_prev_kor) {
-            // 모음 연쇄
             switch (codepoint) {
                 '예' => {
                     // 모음자에 '예'가 붙어 나올 때에는 그 사이에 구분표 ⠤을 적어 나타낸다.
@@ -216,6 +184,48 @@ pub const KorBrailleConverter = struct {
                 else => {},
             }
         }
+        return null;
+    }
+
+    /// Converts next codepoint to braille.
+    /// Returns null if EndOfStream or the current codepoint is delimiter.
+    /// codepoint_iter's `buffer.len` and `peek_buffer.len` must be at least 4.
+    pub fn convertNextBraille(self: *@This(), codepoint_iter: anytype, delimiter: u21) !?KorBrailleCluster {
+        // check parameters
+        typeCheckCodepointIter(codepoint_iter);
+        std.debug.assert(codepoint_iter.ring_buffer.buf.len >= 4);
+        std.debug.assert(codepoint_iter.peek_buffer.len >= 4);
+
+        // read codepoint
+        var codepoint = codepoint_iter.peek() catch |err| {
+            switch (err) {
+                error.EndOfStream => return null,
+                else => return err,
+            }
+        };
+
+        // check delimiter
+        if (codepoint == delimiter) {
+            return null;
+        }
+
+        // update state
+        var is_kor = false;
+        defer self.is_prev_kor = is_kor;
+        defer self.prev_codepoint = codepoint;
+
+        // convert word
+        if (!self.is_prev_kor) {
+            if (try korWordToBrailleAbbrev(codepoint_iter, delimiter, &codepoint)) |braille| {
+                is_kor = true;
+                return braille;
+            }
+        }
+
+        // consecutive moeum
+        if (self.consecutiveMoeum(codepoint)) |braille| {
+            return braille;
+        }
 
         // consume codepoint
         try codepoint_iter.skip(1);
@@ -229,10 +239,10 @@ pub const KorBrailleConverter = struct {
         }
     }
 
-    /// Convert input codepoints to braille and print it to the writer.
-    /// Stops if end of stream or the next codepoint is delimiter.
-    /// Size of codepoint_iter's `buffer` and `peek_buffer` must be at least 4.
-    pub fn printUntilDelimiter(self: *@This(), writer: std.io.AnyWriter, codepoint_iter: anytype, delimiter: u21) !void {
+    /// Converts input codepoints to braille and prints it to the writer.
+    /// Stops if EndOfStream or the current codepoint is delimiter.
+    /// codepoint_iter's `buffer.len` and `peek_buffer.len` must be at least 4.
+    pub fn printBrailleUntilDelimiter(self: *@This(), writer: std.io.AnyWriter, codepoint_iter: anytype, delimiter: u21) !void {
         // check parameters
         typeCheckCodepointIter(codepoint_iter);
         std.debug.assert(codepoint_iter.ring_buffer.buf.len >= 4);
