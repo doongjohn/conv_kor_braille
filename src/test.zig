@@ -1,6 +1,7 @@
 const std = @import("std");
-const ckb = @import("conv_kor_braille.zig");
+const kbc = @import("kor_braille_converter.zig");
 
+const KorBrailleConverter = kbc.KorBrailleConverter;
 const CodepointIterator = @import("codepoint_iter.zig").CodepointIterator;
 const AnyCodepointIterator = CodepointIterator(std.io.AnyReader, std.io.AnyReader.Error);
 
@@ -13,31 +14,31 @@ fn readCodepoint(reader: std.io.AnyReader) !u21 {
 }
 
 test "jamo" {
-    try expectEqualSlices(u21, ckb.korCharToBraille('ㄱ').?.asSlice(), &.{ '⠿', '⠈' });
-    try expectEqualSlices(u21, ckb.korCharToBraille('ㄲ').?.asSlice(), &.{ '⠿', '⠠', '⠈' });
-    try expectEqualSlices(u21, ckb.korCharToBraille('ㄴ').?.asSlice(), &.{ '⠿', '⠉' });
-    try expectEqualSlices(u21, ckb.korCharToBraille('ㄷ').?.asSlice(), &.{ '⠿', '⠊' });
-    try expectEqualSlices(u21, ckb.korCharToBraille('ㄹ').?.asSlice(), &.{ '⠿', '⠐' });
+    try expectEqualSlices(u21, kbc.korCharToBraille('ㄱ').?.asSlice(), &.{ '⠿', '⠈' });
+    try expectEqualSlices(u21, kbc.korCharToBraille('ㄲ').?.asSlice(), &.{ '⠿', '⠠', '⠈' });
+    try expectEqualSlices(u21, kbc.korCharToBraille('ㄴ').?.asSlice(), &.{ '⠿', '⠉' });
+    try expectEqualSlices(u21, kbc.korCharToBraille('ㄷ').?.asSlice(), &.{ '⠿', '⠊' });
+    try expectEqualSlices(u21, kbc.korCharToBraille('ㄹ').?.asSlice(), &.{ '⠿', '⠐' });
 
-    try expectEqualSlices(u21, ckb.korCharToBraille('ㅏ').?.asSlice(), &.{ '⠿', '⠣' });
-    try expectEqualSlices(u21, ckb.korCharToBraille('ㅐ').?.asSlice(), &.{ '⠿', '⠗' });
-    try expectEqualSlices(u21, ckb.korCharToBraille('ㅒ').?.asSlice(), &.{ '⠿', '⠜', '⠗' });
-    try expectEqualSlices(u21, ckb.korCharToBraille('ㅚ').?.asSlice(), &.{ '⠿', '⠽' });
+    try expectEqualSlices(u21, kbc.korCharToBraille('ㅏ').?.asSlice(), &.{ '⠿', '⠣' });
+    try expectEqualSlices(u21, kbc.korCharToBraille('ㅐ').?.asSlice(), &.{ '⠿', '⠗' });
+    try expectEqualSlices(u21, kbc.korCharToBraille('ㅒ').?.asSlice(), &.{ '⠿', '⠜', '⠗' });
+    try expectEqualSlices(u21, kbc.korCharToBraille('ㅚ').?.asSlice(), &.{ '⠿', '⠽' });
 
-    try expectEqualSlices(u21, ckb.korCharToBraille('ㄳ').?.asSlice(), &.{ '⠿', '⠁', '⠄' });
-    try expectEqualSlices(u21, ckb.korCharToBraille('ㄵ').?.asSlice(), &.{ '⠿', '⠒', '⠅' });
-    try expectEqualSlices(u21, ckb.korCharToBraille('ㄺ').?.asSlice(), &.{ '⠿', '⠂', '⠁' });
+    try expectEqualSlices(u21, kbc.korCharToBraille('ㄳ').?.asSlice(), &.{ '⠿', '⠁', '⠄' });
+    try expectEqualSlices(u21, kbc.korCharToBraille('ㄵ').?.asSlice(), &.{ '⠿', '⠒', '⠅' });
+    try expectEqualSlices(u21, kbc.korCharToBraille('ㄺ').?.asSlice(), &.{ '⠿', '⠂', '⠁' });
 }
 
 test "composite char" {
-    try expectEqualSlices(u21, ckb.korCharToBraille('안').?.asSlice(), &.{ '⠣', '⠒' });
-    try expectEqualSlices(u21, ckb.korCharToBraille('녕').?.asSlice(), &.{ '⠉', '⠱', '⠶' });
-    try expectEqualSlices(u21, ckb.korCharToBraille('낮').?.asSlice(), &.{ '⠉', '⠣', '⠅' });
-    try expectEqualSlices(u21, ckb.korCharToBraille('밤').?.asSlice(), &.{ '⠘', '⠣', '⠢' });
-    try expectEqualSlices(u21, ckb.korCharToBraille('았').?.asSlice(), &.{ '⠣', '⠌' });
-    try expectEqualSlices(u21, ckb.korCharToBraille('너').?.asSlice(), &.{ '⠉', '⠎' });
-    try expectEqualSlices(u21, ckb.korCharToBraille('앉').?.asSlice(), &.{ '⠣', '⠒', '⠅' });
-    try expectEqualSlices(u21, ckb.korCharToBraille('닭').?.asSlice(), &.{ '⠊', '⠣', '⠂', '⠁' });
+    try expectEqualSlices(u21, kbc.korCharToBraille('안').?.asSlice(), &.{ '⠣', '⠒' });
+    try expectEqualSlices(u21, kbc.korCharToBraille('녕').?.asSlice(), &.{ '⠉', '⠱', '⠶' });
+    try expectEqualSlices(u21, kbc.korCharToBraille('낮').?.asSlice(), &.{ '⠉', '⠣', '⠅' });
+    try expectEqualSlices(u21, kbc.korCharToBraille('밤').?.asSlice(), &.{ '⠘', '⠣', '⠢' });
+    try expectEqualSlices(u21, kbc.korCharToBraille('았').?.asSlice(), &.{ '⠣', '⠌' });
+    try expectEqualSlices(u21, kbc.korCharToBraille('너').?.asSlice(), &.{ '⠉', '⠎' });
+    try expectEqualSlices(u21, kbc.korCharToBraille('앉').?.asSlice(), &.{ '⠣', '⠒', '⠅' });
+    try expectEqualSlices(u21, kbc.korCharToBraille('닭').?.asSlice(), &.{ '⠊', '⠣', '⠂', '⠁' });
 }
 
 test "char abbrev" {
@@ -82,7 +83,41 @@ test "word abbrev" {
         fbs.buffer = std.mem.sliceAsBytes(input);
 
         var last_codepoint: u21 = undefined;
-        try expectEqualSlices(u21, (try ckb.korWordToBraille(&input_iter, 0, &last_codepoint)).?.asSlice(), output);
+        try expectEqualSlices(u21, (try kbc.korWordToBraille(&input_iter, 0, &last_codepoint)).?.asSlice(), output);
+    }
+}
+
+test "consecutive moeum" {
+    var fbs = std.io.fixedBufferStream(&[_]u8{});
+    const fbs_reader = fbs.reader();
+
+    var input_buf: [4]u21 = undefined;
+    var input_peek_buf: [4]u21 = undefined;
+    var input_iter = AnyCodepointIterator.init(fbs_reader.any(), &readCodepoint, &input_buf, &input_peek_buf);
+
+    const inputs = [_][]const u21{
+        &.{ '서', '예' },
+        &.{ '그', '래', '서', '예' },
+        &.{ '화', '애' },
+    };
+    const outputs = [_][]const u21{
+        &.{ '⠠', '⠎', '⠤', '⠌' }, // 서예
+        &.{ '⠁', '⠎', '⠤', '⠌' }, // 그래서예
+        &.{ '⠚', '⠧', '⠤', '⠗' }, // 화애
+    };
+
+    for (inputs, outputs) |input, output| {
+        fbs.reset();
+        fbs.buffer = std.mem.sliceAsBytes(input);
+
+        var converter = KorBrailleConverter{};
+        var i: usize = 0;
+        while (try converter.convertNextBraille(&input_iter, 0)) |braille| {
+            const brailles = braille.asSlice();
+            defer i += brailles.len;
+            try expectEqualSlices(u21, output[i .. i + brailles.len], brailles);
+        }
+        try expect(i == output.len);
     }
 }
 
@@ -107,7 +142,7 @@ test "sentence" {
         fbs.reset();
         fbs.buffer = std.mem.sliceAsBytes(input);
 
-        var converter = ckb.BrailleConverter{};
+        var converter = KorBrailleConverter{};
         var i: usize = 0;
         while (try converter.convertNextBraille(&input_iter, 0)) |braille| {
             const brailles = braille.asSlice();
