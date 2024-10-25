@@ -4,7 +4,7 @@ Based on: [2024 개정 한국 점자 규정](https://korean.go.kr/front_eng/down
 
 ## Building & Testing
 
-- Tested Zig version: `0.14.0-dev.1952+9f84f7f92`
+- Tested Zig version: `0.14.0-dev.2032+c563ba6b1`
 - Build: `zig build`
 - Test: `zig build test --summary all`
 

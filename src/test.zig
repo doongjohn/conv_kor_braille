@@ -2,8 +2,8 @@ const std = @import("std");
 const kbc = @import("kor_braille_converter.zig");
 
 const KorBrailleConverter = kbc.KorBrailleConverter;
-const CodepointIterator = @import("codepoint_iter.zig").CodepointIterator;
-const AnyCodepointIterator = CodepointIterator(std.io.AnyReader, std.io.AnyReader.Error);
+const GenericCodepointIterator = @import("codepoint_iter.zig").GenericCodepointIterator;
+const AnyCodepointIterator = GenericCodepointIterator(std.io.AnyReader, std.io.AnyReader.Error);
 
 const expect = std.testing.expect;
 const expectEqualSlices = std.testing.expectEqualSlices;

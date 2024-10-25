@@ -3,8 +3,8 @@ const cli = @import("cli.zig");
 const kbc = @import("kor_braille_converter.zig");
 
 const KorBrailleConverter = kbc.KorBrailleConverter;
-const CodepointIterator = @import("codepoint_iter.zig").CodepointIterator;
-const StdInCodepointIterator = CodepointIterator(cli.console, cli.ConsoleReadError);
+const GenericCodepointIterator = @import("codepoint_iter.zig").GenericCodepointIterator;
+const StdInCodepointIterator = GenericCodepointIterator(cli.console, cli.ConsoleReadError);
 
 pub fn main() !void {
     cli.console.init();

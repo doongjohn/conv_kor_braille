@@ -5,6 +5,7 @@ const kor_braille = @import("kor_braille.zig");
 const KorCharIndex = kor_braille.KorCharIndex;
 const KorBrailleCluster = kor_braille.KorBrailleCluster;
 
+const initAnyCodepointIterator = @import("codepoint_iter.zig").initAnyCodepointIterator;
 const korCharToIndex = kor_braille.korCharToIndex;
 const choseongToBraille = kor_braille.choseongToBraille;
 const jungseongToBraille = kor_braille.jungseongToBraille;
@@ -132,12 +133,6 @@ pub const KorBrailleConverter = struct {
         self.prev_codepoint = 0;
     }
 
-    inline fn typeCheckCodepointIter(codepoint_iter: anytype) void {
-        if (@typeInfo(@TypeOf(codepoint_iter)) != .pointer) {
-            @compileError("codepoint_iter must be a pointer to CodepointIterator");
-        }
-    }
-
     /// 모음 연쇄
     fn consecutiveMoeum(self: *@This(), codepoint: u21) ?KorBrailleCluster {
         if (self.is_prev_kor) {
@@ -189,12 +184,11 @@ pub const KorBrailleConverter = struct {
 
     /// Convert next codepoint to braille.
     /// Return null if EndOfStream or the current codepoint is delimiter.
-    /// codepoint_iter's `buffer.len` and `peek_buffer.len` must be at least 4.
-    pub fn convertNextBraille(self: *@This(), codepoint_iter: anytype, delimiter: u21) !?KorBrailleCluster {
+    /// codepoint_iter's buffer capacity must be at least 4.
+    pub fn convertNextBraille(self: *@This(), codepoint_iter_impl: anytype, delimiter: u21) !?KorBrailleCluster {
         // check parameters
-        typeCheckCodepointIter(codepoint_iter);
-        std.debug.assert(codepoint_iter.ring_buffer.buf.len >= 4);
-        std.debug.assert(codepoint_iter.peek_buffer.len >= 4);
+        const codepoint_iter = initAnyCodepointIterator(codepoint_iter_impl);
+        std.debug.assert(codepoint_iter.getBufferCapacity() >= 4);
 
         // read codepoint
         var codepoint = codepoint_iter.peek() catch |err| {
@@ -241,12 +235,11 @@ pub const KorBrailleConverter = struct {
 
     /// Convert input codepoints to braille and print it to the writer.
     /// Stop printing if EndOfStream or the current codepoint is delimiter.
-    /// codepoint_iter's `buffer.len` and `peek_buffer.len` must be at least 4.
-    pub fn printAsBrailles(self: *@This(), writer: std.io.AnyWriter, codepoint_iter: anytype, delimiter: u21) !void {
+    /// codepoint_iter's buffer capacity must be at least 4.
+    pub fn printAsBrailles(self: *@This(), writer: std.io.AnyWriter, codepoint_iter_impl: anytype, delimiter: u21) !void {
         // check parameters
-        typeCheckCodepointIter(codepoint_iter);
-        std.debug.assert(codepoint_iter.ring_buffer.buf.len >= 4);
-        std.debug.assert(codepoint_iter.peek_buffer.len >= 4);
+        const codepoint_iter = initAnyCodepointIterator(codepoint_iter_impl);
+        std.debug.assert(codepoint_iter.getBufferCapacity() >= 4);
 
         // reset state on function exit
         defer self.reset();
@@ -261,7 +254,7 @@ pub const KorBrailleConverter = struct {
             };
 
             // convert to braille
-            const conv_result = self.convertNextBraille(codepoint_iter, delimiter) catch |err| {
+            const conv_result = self.convertNextBraille(codepoint_iter_impl, delimiter) catch |err| {
                 switch (err) {
                     error.ConversionFailed => {
                         try writer.print("{u}", .{codepoint});

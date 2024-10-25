@@ -2,7 +2,78 @@ const std = @import("std");
 
 const GenericRingBuffer = @import("generic_ringbuffer.zig").GenericRingBuffer;
 
-pub fn CodepointIterator(Context: type, ReadError: type) type {
+fn checkMethodSignature(method: anytype, Signature: type) void {
+    const methodInfo = @typeInfo(@TypeOf(method)).@"fn";
+    const signatureInfo = @typeInfo(Signature).@"fn";
+
+    // check params
+    try std.testing.expectEqualSlices(
+        std.builtin.Type.Fn.Param,
+        methodInfo.params[1..],
+        signatureInfo.params[0..],
+    );
+
+    // check return type
+    try std.testing.expect(methodInfo.return_type == signatureInfo.return_type);
+}
+
+fn AnyCodepointIterator(PtrT: type) type {
+    return struct {
+        impl: PtrT,
+
+        pub inline fn getBufferCapacity(self: @This()) usize {
+            return self.impl.getBufferCapacity();
+        }
+
+        /// Reset internal state.
+        /// Peeked data will be discarded.
+        pub inline fn reset(self: @This()) void {
+            self.impl.reset();
+        }
+
+        pub inline fn next(self: @This()) !u21 {
+            return self.impl.next();
+        }
+
+        /// Discard `n` items.
+        pub inline fn skip(self: @This(), n: usize) !void {
+            try self.impl.skip(n);
+        }
+
+        pub inline fn peek(self: @This()) !u21 {
+            return self.impl.peek();
+        }
+
+        /// Peek `n` items and return it as a slice.
+        /// Returned slice is valid until `fn next` or `fn skip` is called.
+        pub inline fn peekUntilDelimiter(self: @This(), n: usize, delimiter: u21) ![]const u21 {
+            return self.impl.peekUntilDelimiter(n, delimiter);
+        }
+    };
+}
+
+/// Comptime interface
+pub fn initAnyCodepointIterator(codepoint_iter_impl: anytype) AnyCodepointIterator(@TypeOf(codepoint_iter_impl)) {
+    comptime {
+        switch (@typeInfo(@TypeOf(codepoint_iter_impl))) {
+            .pointer => |pointer| {
+                const T = pointer.child;
+                checkMethodSignature(T.getBufferCapacity, fn () usize);
+                checkMethodSignature(T.reset, fn () void);
+                checkMethodSignature(T.next, fn () anyerror!u21);
+                checkMethodSignature(T.skip, fn (n: usize) anyerror!void);
+                checkMethodSignature(T.peek, fn () anyerror!u21);
+                checkMethodSignature(T.peekUntilDelimiter, fn (n: usize, delimiter: u21) anyerror![]const u21);
+            },
+            else => {
+                @compileError(std.fmt.comptimePrint("Type T must be a pointer to CodepointIterator but found: {}", .{@TypeOf(codepoint_iter_impl)}));
+            },
+        }
+    }
+    return .{ .impl = codepoint_iter_impl };
+}
+
+pub fn GenericCodepointIterator(Context: type, ReadError: type) type {
     return struct {
         context: Context,
         readFn: *const fn (context: Context) ReadError!u21,
@@ -30,13 +101,17 @@ pub fn CodepointIterator(Context: type, ReadError: type) type {
             };
         }
 
+        pub fn getBufferCapacity(self: @This()) usize {
+            return self.ring_buffer.buf.len;
+        }
+
         /// Reset internal state.
         /// Peeked data will be discarded.
         pub fn reset(self: *@This()) void {
             self.ring_buffer.clear();
         }
 
-        pub fn next(self: *@This()) !u21 {
+        pub fn next(self: *@This()) anyerror!u21 {
             if (self.ring_buffer.size == 0) {
                 return try self.readFn(self.context);
             } else {
@@ -45,13 +120,13 @@ pub fn CodepointIterator(Context: type, ReadError: type) type {
         }
 
         /// Discard `n` items.
-        pub fn skip(self: *@This(), n: usize) !void {
+        pub fn skip(self: *@This(), n: usize) anyerror!void {
             for (0..n) |_| {
                 _ = try self.next();
             }
         }
 
-        pub fn peek(self: *@This()) !u21 {
+        pub fn peek(self: *@This()) anyerror!u21 {
             if (self.ring_buffer.size == 0) {
                 const codepoint = try self.readFn(self.context);
                 try self.ring_buffer.pushBack(codepoint);
@@ -61,7 +136,7 @@ pub fn CodepointIterator(Context: type, ReadError: type) type {
 
         /// Peek `n` items and return it as a slice.
         /// Returned slice is valid until `fn next` or `fn skip` is called.
-        pub fn peekUntilDelimiter(self: *@This(), n: usize, delimiter: u21) ![]const u21 {
+        pub fn peekUntilDelimiter(self: *@This(), n: usize, delimiter: u21) anyerror![]const u21 {
             if (n == 0 or self.ring_buffer.buf.len < n) {
                 return &.{};
             }
