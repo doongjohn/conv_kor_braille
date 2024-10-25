@@ -1,23 +1,7 @@
 const std = @import("std");
 
-const GenericRingBuffer = @import("generic_ringbuffer.zig").GenericRingBuffer;
-
-fn checkMethodSignature(method: anytype, Signature: type) void {
-    const methodInfo = @typeInfo(@TypeOf(method)).@"fn";
-    const signatureInfo = @typeInfo(Signature).@"fn";
-
-    // check params
-    try std.testing.expectEqualSlices(
-        std.builtin.Type.Fn.Param,
-        methodInfo.params[1..],
-        signatureInfo.params[0..],
-    );
-
-    // check return type
-    try std.testing.expect(methodInfo.return_type == signatureInfo.return_type);
-}
-
-fn AnyCodepointIterator(PtrT: type) type {
+/// Comptime interface
+pub fn AnyCodepointIterator(PtrT: type) type {
     return struct {
         impl: PtrT,
 
@@ -52,7 +36,21 @@ fn AnyCodepointIterator(PtrT: type) type {
     };
 }
 
-/// Comptime interface
+fn checkMethodSignature(method: anytype, Signature: type) void {
+    const methodInfo = @typeInfo(@TypeOf(method)).@"fn";
+    const signatureInfo = @typeInfo(Signature).@"fn";
+
+    // check params
+    try std.testing.expectEqualSlices(
+        std.builtin.Type.Fn.Param,
+        methodInfo.params[1..],
+        signatureInfo.params[0..],
+    );
+
+    // check return type
+    try std.testing.expect(methodInfo.return_type == signatureInfo.return_type);
+}
+
 pub fn initAnyCodepointIterator(codepoint_iter_impl: anytype) AnyCodepointIterator(@TypeOf(codepoint_iter_impl)) {
     comptime {
         switch (@typeInfo(@TypeOf(codepoint_iter_impl))) {
@@ -74,6 +72,8 @@ pub fn initAnyCodepointIterator(codepoint_iter_impl: anytype) AnyCodepointIterat
 }
 
 pub fn GenericCodepointIterator(Context: type, ReadError: type) type {
+    const GenericRingBuffer = @import("generic_ringbuffer.zig").GenericRingBuffer;
+
     return struct {
         context: Context,
         readFn: *const fn (context: Context) ReadError!u21,
