@@ -37,36 +37,36 @@ pub fn AnyCodepointIterator(PtrT: type) type {
 }
 
 fn checkMethodSignature(method: anytype, Signature: type) void {
-    const methodInfo = @typeInfo(@TypeOf(method)).@"fn";
-    const signatureInfo = @typeInfo(Signature).@"fn";
+    comptime {
+        const methodInfo = @typeInfo(@TypeOf(method)).@"fn";
+        const signatureInfo = @typeInfo(Signature).@"fn";
 
-    // check params
-    try std.testing.expectEqualSlices(
-        std.builtin.Type.Fn.Param,
-        methodInfo.params[1..],
-        signatureInfo.params[0..],
-    );
+        // check params
+        try std.testing.expectEqualSlices(
+            std.builtin.Type.Fn.Param,
+            methodInfo.params[1..],
+            signatureInfo.params[0..],
+        );
 
-    // check return type
-    try std.testing.expect(methodInfo.return_type == signatureInfo.return_type);
+        // check return type
+        try std.testing.expect(methodInfo.return_type == signatureInfo.return_type);
+    }
 }
 
 pub fn initAnyCodepointIterator(codepoint_iter_impl: anytype) AnyCodepointIterator(@TypeOf(codepoint_iter_impl)) {
-    comptime {
-        switch (@typeInfo(@TypeOf(codepoint_iter_impl))) {
-            .pointer => |pointer| {
-                const T = pointer.child;
-                checkMethodSignature(T.getBufferCapacity, fn () usize);
-                checkMethodSignature(T.reset, fn () void);
-                checkMethodSignature(T.next, fn () anyerror!u21);
-                checkMethodSignature(T.skip, fn (n: usize) anyerror!void);
-                checkMethodSignature(T.peek, fn () anyerror!u21);
-                checkMethodSignature(T.peekUntilDelimiter, fn (n: usize, delimiter: u21) anyerror![]const u21);
-            },
-            else => {
-                @compileError(std.fmt.comptimePrint("Type T must be a pointer to CodepointIterator but found: {}", .{@TypeOf(codepoint_iter_impl)}));
-            },
-        }
+    switch (@typeInfo(@TypeOf(codepoint_iter_impl))) {
+        .pointer => |pointer| {
+            const T = pointer.child;
+            checkMethodSignature(T.getBufferCapacity, fn () usize);
+            checkMethodSignature(T.reset, fn () void);
+            checkMethodSignature(T.next, fn () anyerror!u21);
+            checkMethodSignature(T.skip, fn (n: usize) anyerror!void);
+            checkMethodSignature(T.peek, fn () anyerror!u21);
+            checkMethodSignature(T.peekUntilDelimiter, fn (n: usize, delimiter: u21) anyerror![]const u21);
+        },
+        else => {
+            @compileError(std.fmt.comptimePrint("Type T must be a pointer to CodepointIterator but found: {}", .{@TypeOf(codepoint_iter_impl)}));
+        },
     }
     return .{ .impl = codepoint_iter_impl };
 }
