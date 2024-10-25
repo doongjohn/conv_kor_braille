@@ -36,33 +36,31 @@ pub fn AnyCodepointIterator(PtrT: type) type {
     };
 }
 
-fn checkMethodSignature(method: anytype, Signature: type) void {
-    comptime {
-        const methodInfo = @typeInfo(@TypeOf(method)).@"fn";
-        const signatureInfo = @typeInfo(Signature).@"fn";
-
-        // check params
-        try std.testing.expectEqualSlices(
-            std.builtin.Type.Fn.Param,
-            methodInfo.params[1..],
-            signatureInfo.params[0..],
-        );
-
-        // check return type
-        try std.testing.expect(methodInfo.return_type == signatureInfo.return_type);
+inline fn checkFnSignature(comptime lhs: anytype, comptime fn_name: []const u8, Signature: type) void {
+    const FnType = @TypeOf(@field(lhs, fn_name));
+    if (@typeInfo(FnType) != .@"fn") {
+        @compileError(std.fmt.comptimePrint("T.{s} is not a function!", .{fn_name}));
+    }
+    if (@typeInfo(Signature) != .@"fn") {
+        @compileError(std.fmt.comptimePrint("Signature is not a function!", .{}));
+    }
+    if (FnType != Signature) {
+        @compileError(std.fmt.comptimePrint("`fn {s}` mismatch!\nfound: {}\nexpect: {}", .{ fn_name, FnType, Signature }));
     }
 }
 
+/// Create AnyCodepointIterator from implementation.
+/// Lifetime of returned AnyCodepointIterator is same as the implementation.
 pub fn initAnyCodepointIterator(codepoint_iter_impl: anytype) AnyCodepointIterator(@TypeOf(codepoint_iter_impl)) {
     switch (@typeInfo(@TypeOf(codepoint_iter_impl))) {
         .pointer => |pointer| {
             const T = pointer.child;
-            checkMethodSignature(T.getBufferCapacity, fn () usize);
-            checkMethodSignature(T.reset, fn () void);
-            checkMethodSignature(T.next, fn () anyerror!u21);
-            checkMethodSignature(T.skip, fn (n: usize) anyerror!void);
-            checkMethodSignature(T.peek, fn () anyerror!u21);
-            checkMethodSignature(T.peekUntilDelimiter, fn (n: usize, delimiter: u21) anyerror![]const u21);
+            checkFnSignature(T, "getBufferCapacity", fn (self: T) usize);
+            checkFnSignature(T, "reset", fn (self: *T) void);
+            checkFnSignature(T, "next", fn (self: *T) anyerror!u21);
+            checkFnSignature(T, "skip", fn (self: *T, n: usize) anyerror!void);
+            checkFnSignature(T, "peek", fn (self: *T) anyerror!u21);
+            checkFnSignature(T, "peekUntilDelimiter", fn (self: *T, n: usize, delimiter: u21) anyerror![]const u21);
         },
         else => {
             @compileError(std.fmt.comptimePrint("Type T must be a pointer to CodepointIterator but found: {}", .{@TypeOf(codepoint_iter_impl)}));
