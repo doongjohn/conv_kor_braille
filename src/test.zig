@@ -83,7 +83,7 @@ test "word abbrev" {
         fbs.buffer = std.mem.sliceAsBytes(input);
 
         var last_codepoint: u21 = undefined;
-        try expectEqualSlices(u21, (try kbc.korWordToBrailleAbbrev(&input_iter, 0, &last_codepoint)).?.asSlice(), output);
+        try expectEqualSlices(u21, (try kbc.korWordToBrailleAbbrev(input_iter.iter(), 0, &last_codepoint)).?.asSlice(), output);
     }
 }
 
@@ -112,7 +112,7 @@ test "consecutive moeum" {
 
         var converter = KorBrailleConverter{};
         var i: usize = 0;
-        while (try converter.convertNextBraille(&input_iter, 0)) |braille| {
+        while (try converter.convertNextBraille(input_iter.iter(), 0)) |braille| {
             const brailles = braille.asSlice();
             defer i += brailles.len;
             try expectEqualSlices(u21, output[i .. i + brailles.len], brailles);
@@ -144,7 +144,7 @@ test "sentence" {
 
         var converter = KorBrailleConverter{};
         var i: usize = 0;
-        while (try converter.convertNextBraille(&input_iter, 0)) |braille| {
+        while (try converter.convertNextBraille(input_iter.iter(), 0)) |braille| {
             const brailles = braille.asSlice();
             defer i += brailles.len;
             try expectEqualSlices(u21, output[i .. i + brailles.len], brailles);
