@@ -1,6 +1,6 @@
 const std = @import("std");
 
-pub const CodepointIteratorVTable = struct {
+pub const VTable = struct {
     getBufferCapacity: *const fn (self: *anyopaque) usize,
     reset: *const fn (self: *anyopaque) void,
     next: *const fn (self: *anyopaque) anyerror!u21,
@@ -11,7 +11,7 @@ pub const CodepointIteratorVTable = struct {
 
 pub const CodepointIterator = struct {
     impl: *anyopaque,
-    vtable: *const CodepointIteratorVTable,
+    vtable: *const VTable,
 
     /// Get internal buffer capacity.
     pub inline fn getBufferCapacity(self: @This()) usize {
