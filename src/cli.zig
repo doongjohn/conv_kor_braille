@@ -18,9 +18,8 @@ const console_impl_windows = struct {
 
     const win32 = struct {
         const win = std.os.windows;
-        const WINAPI = win.WINAPI;
 
-        extern "kernel32" fn ReadConsoleW(handle: win.HANDLE, buffer: [*]u16, len: win.DWORD, read: *win.DWORD, input_ctrl: ?*anyopaque) callconv(WINAPI) bool;
+        extern "kernel32" fn ReadConsoleW(handle: win.HANDLE, buffer: [*]u16, len: win.DWORD, read: *win.DWORD, input_ctrl: ?*anyopaque) callconv(.winapi) bool;
     };
 
     fn init() void {
