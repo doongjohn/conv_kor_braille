@@ -169,18 +169,15 @@ pub const KorBrailleCluster = union(enum) {
         }
     }
 
-    pub fn format(self: *const @This(), comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {
-        _ = fmt;
-        _ = options;
-
-        switch (self.*) {
+    pub fn format(this: @This(), writer: *std.io.Writer) !void {
+        switch (this) {
             .single => |*single| {
                 for (0..single.len) |i| {
                     try writer.print("{u}", .{single.buf[i]});
                 }
             },
             .composite => |*composite| {
-                const len = self.getCodepointLength();
+                const len = this.getCodepointLength();
                 for (0..len) |i| {
                     try writer.print("{u}", .{composite.buf[i]});
                 }

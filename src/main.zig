@@ -15,12 +15,11 @@ pub fn main() !void {
     const consoleReadCodepoint = cli.console.methods.readCodepoint;
     var stdin_iter = StdInCodepointIterator.init(undefined, &consoleReadCodepoint, &input_buf, &input_peek_buf);
 
-    var buf_writer = std.io.bufferedWriter(std.io.getStdOut().writer());
-    var writer = buf_writer.writer();
+    var stdout_writer = std.fs.File.stdout().writerStreaming(&.{});
 
     var converter = KorBrailleConverter{};
-    try converter.printAsBrailles(writer.any(), stdin_iter.iter(), '\n');
+    try converter.printAsBrailles(&stdout_writer.interface, stdin_iter.iter(), '\n');
 
-    try writer.print("\n", .{});
-    try buf_writer.flush();
+    try stdout_writer.interface.print("\n", .{});
+    try stdout_writer.interface.flush();
 }

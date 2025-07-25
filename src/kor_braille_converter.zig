@@ -235,7 +235,7 @@ pub const KorBrailleConverter = struct {
     /// Convert input codepoints to braille and print it to the writer.
     /// Stop printing if EndOfStream or the current codepoint is delimiter.
     /// codepoint_iter's buffer capacity must be at least 4.
-    pub fn printAsBrailles(self: *@This(), writer: std.io.AnyWriter, codepoint_iter: CodepointIterator, delimiter: u21) !void {
+    pub fn printAsBrailles(self: *@This(), writer: *std.Io.Writer, codepoint_iter: CodepointIterator, delimiter: u21) !void {
         // check parameters
         std.debug.assert(codepoint_iter.getBufferCapacity() >= 4);
 
@@ -264,7 +264,7 @@ pub const KorBrailleConverter = struct {
 
             // print braille
             if (conv_result) |braille| {
-                try writer.print("{s}", .{braille});
+                try writer.print("{f}", .{braille});
             } else {
                 break;
             }

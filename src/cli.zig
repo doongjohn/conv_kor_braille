@@ -23,8 +23,8 @@ const console_impl_windows = struct {
     };
 
     fn init() void {
-        stdin_handle = std.io.getStdIn().handle;
-        stdout_writer = std.io.getStdOut().writer();
+        stdin_handle = std.fs.File.stdin().handle;
+        stdout_writer = std.fs.File.stdout().writerStreaming(&.{});
     }
 
     fn readCodepoint() ConsoleReadError!u21 {
@@ -49,17 +49,17 @@ const console_impl_windows = struct {
 };
 
 const console_impl_unix = struct {
-    const stdin_reader = std.io.getStdIn().reader();
-    const stdout_writer = std.io.getStdOut().writer();
+    const stdin_reader = std.fs.File.stdin().readerStreaming(&.{});
+    const stdout_writer = std.fs.File.stdout().writerStreaming(&.{});
 
     fn init() void {}
 
     fn readCodepoint() ConsoleReadError!u21 {
         var code_units: [4]u8 = undefined;
-        try stdin_reader.readNoEof(code_units[0..1]);
+        try stdin_reader.interface.readSliceAll(code_units[0..1]);
         const len = try std.unicode.utf8ByteSequenceLength(code_units[0]);
         if (len > 1) {
-            try stdin_reader.readNoEof(code_units[1..len]);
+            try stdin_reader.interface.readSliceAll(code_units[1..len]);
         }
         return try std.unicode.utf8Decode(code_units[0..len]);
     }
@@ -76,7 +76,7 @@ pub const console = struct {
     }
 
     pub fn print(comptime format: []const u8, args: anytype) !void {
-        try impl.stdout_writer.print(format, args);
+        try impl.stdout_writer.interface.print(format, args);
     }
 
     pub fn readCodepoint() ConsoleReadError!u21 {
