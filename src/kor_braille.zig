@@ -169,7 +169,7 @@ pub const KorBrailleCluster = union(enum) {
         }
     }
 
-    pub fn format(this: @This(), writer: *std.io.Writer) !void {
+    pub fn format(this: @This(), writer: *std.io.Writer) std.io.Writer.Error!void {
         switch (this) {
             .single => |*single| {
                 for (0..single.len) |i| {
